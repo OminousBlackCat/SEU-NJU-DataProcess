@@ -2,6 +2,7 @@ from copy import deepcopy
 import util
 import struct
 from io import BytesIO
+import struct
 
 '''
 此py文件对一个单独的dat文件进行解析
@@ -92,10 +93,45 @@ def processHeader(stream: BytesIO):
     headDic['SAT_VEL1'] = xVelocity
     headDic['SAT_VEL2'] = yVelocity
     headDic['SAT_VEL3'] = zVelocity
+    # 总读头移动数: 6 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 * 6 = 69
 
+    # 定轨数据(58)
+    stream.read(58)
 
+    # 载荷舱姿态数据（56）
+    # 0~7（8） 载荷舱惯性四元数Q0（8字节双精度）
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q0"] = val_tuple[0]
+    # 8~15（8） 载荷舱惯性四元数Q1（8字节双精度）
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q1"] = val_tuple[0]
+    # 16~23（8） 载荷舱惯性四元数Q2（8字节双精度）
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q2"] = val_tuple[0]
+    # 24~31（8） 载荷舱惯性四元数Q3（8字节双精度）
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q3"] = val_tuple[0]
+    # 角速率32~55(24)
+    stream.read(24)
 
+    # 平台舱姿态数据（28）
+    stream.read(28)
 
+    # 温度数据（2）
+    stream.read(2)
+
+    # 望远镜工作参数（64）
+    # 0~12（13） 电机1参数
+    stream.read(13)
+    # 13~25（13）   电机2参数
+    stream.read(13)
+    # 26~29（4）    成像帧计数（无符号整型4位）
+    val_tuple = struct.unpack('I', stream.read(4))
+    headDic["picframeCount"] = val_tuple[0]
+    # 30~33(4)      帧内计数
+    val_tuple = struct.unpack('I', stream.read(4))
+    headDic["frameCount"] = val_tuple[0]
+    stream.close()
     return headDic
 
 
@@ -188,17 +224,20 @@ def dataWork(fread):
             PicData = []
             # 编号计数
             num = num + 1
+            print(num)
+            if num == 500:
+                break
         else:
             # 提取图像帧内容
             PicData = PicData + Data[:index]
             # 保留可能出现数据头的内容
             Data = Data[index:]
             # 无用内容不处理
-    if num > 0:
-        # 处理图像帧内容
-        headerData, picList = processPicStream(PicData, num)
-        # 存储图片信息
-        allData.append([deepcopy(headerData), deepcopy(picList)])
+    # if num > 0:
+    #     # 处理图像帧内容
+    #     headerData, picList = processPicStream(PicData, num)
+    #     # 存储图片信息
+    #     allData.append([deepcopy(headerData), deepcopy(picList)])
     # 输出处理信息
     print("无数据头，解压结束")
     print("发现图片帧：" + str(num))
