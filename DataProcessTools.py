@@ -119,6 +119,8 @@ def PicWork(data, num):
     # 提取自定义数据区
     dataHead = data[8: 8 + 280]
     Head = BytesIO()
+    # 文件流回到开头
+    Head.seek(0)
     FileWrite(dataHead, Head)
     # 去除自定义数据区
     data = data[8 + 278:]
@@ -144,10 +146,14 @@ def PicWork(data, num):
         FileList.append(BytesIO())
         # 写文件流
         FileWrite(data[indexList[i]:indexList[i + 1]], FileList[i])
+        # 文件流回到开头
+        FileList[i].seek(0)
     # 创建文件流
     FileList.append(BytesIO())
     # 写文件流
     FileWrite(data[indexList[M - 1]:], FileList[M - 1])
+    # 文件流回到开头
+    FileList[M - 1].seek(0)
     return Head, FileList
 
 
@@ -216,10 +222,14 @@ def DataWork(fread):
 
 
 if __name__ == '__main__':
-    filename = 'sun_42697.dat'
-    f = open(filename, 'rb')
-    s = 0
-    DataWork(f)
+    f = BytesIO()
+    FileWrite([1, 2, 3, 4, 5, 6], f)
+    f.seek(0)
+    print(GetData(f, 6))
+    # filename = 'sun_42697.dat'
+    # f = open(filename, 'rb')
+    # s = 0
+    # DataWork(f)
     # image = cv2.imread('30402.jp2')
     # print(image)
     # cv2.imwrite('1.png', image)
