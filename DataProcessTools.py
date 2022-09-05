@@ -152,6 +152,9 @@ def PicWork(data, num):
 
 
 # 输入文件流 对文件流工作
+# 输出List
+# 格式 每个元素为一个文件流和一个list
+# 文件流为头文件信息 list为所有子图片的文件流
 def DataWork(fread):
     # num统计读取文件数量
     num = 0
