@@ -2,14 +2,16 @@ import numpy as np
 import struct
 import io
 import cv2
+from io import BytesIO
 
-# 太阳空间望远镜科学载荷数据同步头[14,11,9,0,1,4,6,15]
-# 图像帧同步头[5,5,10,10,5,5,10,10]
-head_data = [14, 11, 9, 0, 1, 4, 6, 15]
-head_pic = [5, 5, 10, 10, 5, 5, 10, 10, 1, 2, 3, 4, 5, 6, 7, 8]
+#太阳空间望远镜科学载荷数据同步头[14,11,9,0,1,4,6,15]
+#图像帧同步头[5,5,10,10,5,5,10,10]
+head_data = [14,11,9,0,1,4,6,15]
+head_pic = [5,5,10,10,5,5,10,10,1,2,3,4,5,6,7,8]
 
 
-# 获取下一个字节数据
+
+#获取下一个字节数据
 def GetNext(fread):
     try:
         # 读取一个字节的内容
@@ -18,41 +20,37 @@ def GetNext(fread):
         val_tuple = struct.unpack('B', data_raw)
         # 输出结果
         return int(val_tuple[0])
-    except BaseException as exception:
-        print(exception)
+    except:
         # 文件读完返回-1
         print("文件已读完")
         return -1
 
-
-# 获取连续多个字节数据
+#获取连续多个字节数据
 # 连续读取nums个字节
-def GetData(fread, nums):
+def GetData(fread,nums):
     data = []
     for i in range(nums):
         # 读取字符
         x = GetNext(fread)
-
-        if x == -1:
+        if x==-1:
             # 无内容用0补齐
             data.append(0)
+            break
         else:
             # 输出提取内容
             data.append(x)
+    # 不足补0
     # 返回内容
     return data
 
-
 # 写二进制文件
-
 # filename为文件名
-def FileWrite(data, filename):
-    with open(filename, 'wb')as fp:
-        for x in data:
-            # 打包回二进制
-            a = struct.pack('B', x)
-            # 写二进制文件
-            fp.write(a)
+def FileWrite(data,file):
+    for x in data:
+        # 打包回二进制
+        a = struct.pack('B', x)
+        # 写二进制文件
+        file.write(a)
 
 
 # 获取目标同步头对应数值
@@ -90,7 +88,6 @@ def FindHead(fread, head_target):
 
 
 # 寻找图片帧的开头
-
 # 输出图片帧开头所在的坐标第一个位置
 # 否则输出len(data)-7
 def FindPicHead(data):
@@ -113,17 +110,16 @@ def FindPicHead(data):
         return index - 8
     return n - 7
 
-
-# 对图片帧文件进行处理
-def PicWork(data, num):
-    # 不足8的倍数补0
-    while len(data) % 8 > 0:
-        data.append(0)
+#对图片帧文件进行处理
+def PicWork(data,num):
+    data =
     # 获取数据长度
     N = len(data)
     indexList = []
-
-    target = GetTarget([15, 15, 4, 15, 15, 15, 5, 1])
+    target = GetTarget([15,15,4,15,15,15,5,1])
+    # 不足8的倍数补0
+    while len(data) % 8 > 0:
+        data.append(0)
     # 统计所有头部分
     for i in range(N - 8):
         if target == GetResult(data[i:i + 4]):
@@ -132,10 +128,17 @@ def PicWork(data, num):
     # print(indexList)
     # print(M)
     # 输出所有文件
-    for i in range(M - 1):
-        FileWrite(data[indexList[i]:indexList[i + 1]], str(num * 10 + i) + ".jp2")
-    FileWrite(data[indexList[M - 1]:], str(num * 10 + M - 1) + ".jp2")
-    return 1
+    FileList = []
+    for i in range(M-1):
+        # 创建文件流
+        FileList.append(BytesIO())
+        # 写文件流
+        FileWrite(data[indexList[i]:indexList[i+1]],FileList[i])
+    # 创建文件流
+    FileList.append(BytesIO())
+    # 写文件流
+    FileWrite(data[indexList[M-1]:], FileList[M-1])
+    return FileList
 
 
 # 输入文件流 对文件流工作
