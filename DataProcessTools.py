@@ -191,6 +191,9 @@ def DataWork(fread):
     return "Over"
 
 
+# 解析
+
+
 if __name__ == '__main__':
     filename = 'sun_42697.dat'
     f = open(filename, 'rb')
