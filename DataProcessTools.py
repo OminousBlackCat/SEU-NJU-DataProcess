@@ -173,7 +173,8 @@ def DataWork(fread):
         # 辅助数据
         headerData = None
         picList = None
-
+        # 存储所有图片信息
+        allData = None
         # 判断有无出现数据帧开头
         if index < len(Data) - 7:
             # 记录新图像帧之前的内容
@@ -184,6 +185,8 @@ def DataWork(fread):
             if num > 0:
                 # 处理图像帧内容
                 headerData, picList = PicWork(PicData, num)
+                # 存储图片信息
+                allData.append([headerData, picList])
             # 情况图像帧
             PicData = []
             # 编号计数
@@ -197,11 +200,13 @@ def DataWork(fread):
     if num > 0:
         # 处理图像帧内容
         headerData, picList = PicWork(PicData, num)
+        # 存储图片信息
+        allData.append([headerData, picList])
     # 输出处理信息
-    print(num)
     print("无数据头，解压结束")
     print("发现图片帧：" + str(num))
-    return "Over"
+    # 输出所有图片信息
+    return allData
 
 
 # 解析
