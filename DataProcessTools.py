@@ -4,14 +4,13 @@ import io
 import cv2
 from io import BytesIO
 
-#太阳空间望远镜科学载荷数据同步头[14,11,9,0,1,4,6,15]
-#图像帧同步头[5,5,10,10,5,5,10,10]
-head_data = [14,11,9,0,1,4,6,15]
-head_pic = [5,5,10,10,5,5,10,10,1,2,3,4,5,6,7,8]
+# 太阳空间望远镜科学载荷数据同步头[14,11,9,0,1,4,6,15]
+# 图像帧同步头[5,5,10,10,5,5,10,10]
+head_data = [14, 11, 9, 0, 1, 4, 6, 15]
+head_pic = [5, 5, 10, 10, 5, 5, 10, 10, 1, 2, 3, 4, 5, 6, 7, 8]
 
 
-
-#获取下一个字节数据
+# 获取下一个字节数据
 def GetNext(fread):
     try:
         # 读取一个字节的内容
@@ -25,14 +24,15 @@ def GetNext(fread):
         print("文件已读完")
         return -1
 
-#获取连续多个字节数据
+
+# 获取连续多个字节数据
 # 连续读取nums个字节
-def GetData(fread,nums):
+def GetData(fread, nums):
     data = []
     for i in range(nums):
         # 读取字符
         x = GetNext(fread)
-        if x==-1:
+        if x == -1:
             # 无内容用0补齐
             data.append(0)
             break
@@ -45,9 +45,10 @@ def GetData(fread,nums):
     # 返回内容
     return data
 
+
 # 写二进制文件
 # filename为文件名
-def FileWrite(data,file):
+def FileWrite(data, file):
     for x in data:
         # 打包回二进制
         a = struct.pack('B', x)
@@ -112,10 +113,11 @@ def FindPicHead(data):
         return index - 8
     return n - 7
 
-#对图片帧文件进行处理
-def PicWork(data,num):
+
+# 对图片帧文件进行处理
+def PicWork(data, num):
     # 提取自定义数据区
-    dataHead = data[8 : 8 + 280]
+    dataHead = data[8: 8 + 280]
     Head = BytesIO()
     FileWrite(dataHead, Head)
     # 去除自定义数据区
@@ -123,7 +125,7 @@ def PicWork(data,num):
     # 获取数据长度
     N = len(data)
     indexList = []
-    target = GetTarget([15,15,4,15,15,15,5,1])
+    target = GetTarget([15, 15, 4, 15, 15, 15, 5, 1])
     # 统计所有头部分
     for i in range(N - 8):
         # 找图片的开头
@@ -137,16 +139,16 @@ def PicWork(data,num):
         data.append(0)
     # 输出所有文件
     FileList = []
-    for i in range(M-1):
+    for i in range(M - 1):
         # 创建文件流
         FileList.append(BytesIO())
         # 写文件流
-        FileWrite(data[indexList[i]:indexList[i+1]],FileList[i])
+        FileWrite(data[indexList[i]:indexList[i + 1]], FileList[i])
     # 创建文件流
     FileList.append(BytesIO())
     # 写文件流
-    FileWrite(data[indexList[M-1]:], FileList[M-1])
-    return FileList
+    FileWrite(data[indexList[M - 1]:], FileList[M - 1])
+    return Head, FileList
 
 
 # 输入文件流 对文件流工作
@@ -168,6 +170,9 @@ def DataWork(fread):
         ErrorControl = GetData(fread, 4)
         # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
         index = FindPicHead(Data)
+        # 辅助数据
+        headerData = None
+        picList = None
 
         # 判断有无出现数据帧开头
         if index < len(Data) - 7:
@@ -178,7 +183,7 @@ def DataWork(fread):
             # 无用内容不处理
             if num > 0:
                 # 处理图像帧内容
-                PicWork(PicData, num)
+                headerData, picList = PicWork(PicData, num)
             # 情况图像帧
             PicData = []
             # 编号计数
@@ -191,7 +196,7 @@ def DataWork(fread):
             # 无用内容不处理
     if num > 0:
         # 处理图像帧内容
-        PicWork(PicData, num)
+        headerData, picList = PicWork(PicData, num)
     # 输出处理信息
     print(num)
     print("无数据头，解压结束")
