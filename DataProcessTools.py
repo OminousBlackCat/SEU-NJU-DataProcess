@@ -1,11 +1,21 @@
 from copy import deepcopy
 import util
+import struct
 from io import BytesIO
+
+'''
+此py文件对一个单独的dat文件进行解析
+主要包含: 
+1. 对一个dat内所有字节流进行解析 寻找所有的有效载荷数据
+2. 对所有的有效载荷数据进行解析 拆出内部的有效载荷图片(processPicStream()函数) 分析出一个头部信息(headProcess())函数
+3. dataWork()函数返回一个有效载荷图片数组(包含六张有效载荷图片, 均为JP2000二进制流) 与一个headerData(字典)
+'''
 
 # 太阳空间望远镜科学载荷数据同步头[14,11,9,0,1,4,6,15]
 # 图像帧同步头[5,5,10,10,5,5,10,10]
 head_data = [14, 11, 9, 0, 1, 4, 6, 15]
 head_pic = [5, 5, 10, 10, 5, 5, 10, 10, 1, 2, 3, 4, 5, 6, 7, 8]
+pic_header = [15, 15, 4, 15, 15, 15, 5, 1]
 
 
 # 寻找数据帧的探头
@@ -49,7 +59,7 @@ def findPicHead(data):
 
 
 # 解析辅助数据并构造header(字典)
-def processHeader(stream):
+def processHeader(stream: BytesIO):
     headDic = {}
     # stream代表输入的辅助数据流
     # 辅助数据格式    0~5(6)    时间码
@@ -60,6 +70,32 @@ def processHeader(stream):
     #               212~213(2)  温度量信息
     #               214~277(64) 望远镜工作参数
     #               278~493(216)填充数据
+
+    # 从头开始读取BytesIO对象
+    stream.seek(0)
+    # 处理定位数据
+    # 定位数据需要的内容为
+    stream.read(6)  # 跳过时间码
+    stream.read(1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
+    workMode = stream.read(1).hex()  # 获得载荷舱工作模式
+    headDic['workMode'] = workMode
+    stream.read(4)  # 跳过J2000时间
+    xPosition = struct.unpack('f', stream.read(4))  # 星务计算X位置(J2000坐标系, 同下)
+    yPosition = struct.unpack('f', stream.read(4))  # 星务计算Y位置
+    zPosition = struct.unpack('f', stream.read(4))  # 星务计算Z位置
+    xVelocity = struct.unpack('f', stream.read(4))  # 星务计算X速度
+    yVelocity = struct.unpack('f', stream.read(4))  # 星务计算Y速度
+    zVelocity = struct.unpack('f', stream.read(4))  # 星务计算Z速度
+    headDic['SAT_POS1'] = xPosition
+    headDic['SAT_POS2'] = yPosition
+    headDic['SAT_POS3'] = zPosition
+    headDic['SAT_VEL1'] = xVelocity
+    headDic['SAT_VEL2'] = yVelocity
+    headDic['SAT_VEL3'] = zVelocity
+
+
+
+
     return headDic
 
 
@@ -76,7 +112,7 @@ def processPicStream(data, num):
     # 获取数据长度
     N = len(data)
     indexList = []
-    target = util.getTarget([15, 15, 4, 15, 15, 15, 5, 1])
+    target = util.getTarget(pic_header)
     # 统计所有头部分
     for i in range(N - 8):
         # 找图片的开头
