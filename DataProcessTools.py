@@ -1,6 +1,7 @@
 from copy import deepcopy
 import util
 from io import BytesIO
+import struct
 
 # 太阳空间望远镜科学载荷数据同步头[14,11,9,0,1,4,6,15]
 # 图像帧同步头[5,5,10,10,5,5,10,10]
@@ -60,6 +61,51 @@ def processHeader(stream):
     #               212~213(2)  温度量信息
     #               214~277(64) 望远镜工作参数
     #               278~493(216)填充数据
+
+
+
+    # 定轨数据(58)
+    data_raw = stream.read(58)
+
+
+    # 载荷舱姿态数据（56）
+    # 0~7（8） 载荷舱惯性四元数Q0（8字节双精度）
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q0"] = val_tuple[0]
+    # 8~15（8） 载荷舱惯性四元数Q1（8字节双精度）
+    data_raw = stream.read(8)
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q1"] = val_tuple[0]
+    # 16~23（8） 载荷舱惯性四元数Q2（8字节双精度）
+    data_raw = stream.read(8)
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q2"] = val_tuple[0]
+    # 24~31（8） 载荷舱惯性四元数Q3（8字节双精度）
+    data_raw = stream.read(8)
+    val_tuple = struct.unpack('d', stream.read(8))
+    headDic["Q3"] = val_tuple[0]
+    # 角速率32~55(24)
+    data_raw = stream.read(24)
+
+
+    # 平台舱姿态数据（28）
+    data_raw = stream.read(28)
+
+    # 温度数据（2）
+    data_raw = stream.read(2)
+
+    # 望远镜工作参数（64）
+    #0~12（13） 电机1参数
+    data_raw = stream.read(13)
+    #13~25（13）   电机2参数
+    data_raw = stream.read(13)
+    #26~29（4）    成像帧计数（无符号整型4位）
+    val_tuple = struct.unpack('I', stream.read(4))
+    headDic["picframeCount"]=val_tuple[0]
+    #30~33(4)      帧内计数
+    data_raw = stream.read(4)
+    val_tuple = struct.unpack('I', stream.read(4))
+    headDic["frameCount"]=val_tuple[0]
     return headDic
 
 
