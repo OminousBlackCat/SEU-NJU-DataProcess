@@ -40,6 +40,8 @@ def GetData(fread,nums):
             # 输出提取内容
             data.append(x)
     # 不足补0
+    while len(data) < nums:
+        data.append(0)
     # 返回内容
     return data
 
@@ -112,21 +114,27 @@ def FindPicHead(data):
 
 #对图片帧文件进行处理
 def PicWork(data,num):
-    data =
+    # 提取自定义数据区
+    dataHead = data[8 : 8 + 280]
+    Head = BytesIO()
+    FileWrite(dataHead, Head)
+    # 去除自定义数据区
+    data = data[8 + 278:]
     # 获取数据长度
     N = len(data)
     indexList = []
     target = GetTarget([15,15,4,15,15,15,5,1])
-    # 不足8的倍数补0
-    while len(data) % 8 > 0:
-        data.append(0)
     # 统计所有头部分
     for i in range(N - 8):
+        # 找图片的开头
         if target == GetResult(data[i:i + 4]):
             indexList.append(i)
     M = len(indexList)
     # print(indexList)
     # print(M)
+    # 不足8的倍数补0
+    while len(data) % 8 > 0:
+        data.append(0)
     # 输出所有文件
     FileList = []
     for i in range(M-1):
