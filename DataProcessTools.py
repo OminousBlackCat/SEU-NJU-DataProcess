@@ -72,8 +72,6 @@ def processHeader(stream: BytesIO):
     #               214~277(64) 望远镜工作参数
     #               278~493(216)填充数据
 
-    # 从头开始读取BytesIO对象
-    stream.seek(0)
     # 处理定位数据
     # 定位数据需要的内容为
     stream.read(6)  # 跳过时间码
@@ -140,6 +138,7 @@ def processPicStream(data, num):
     # 提取自定义数据区
     dataHead = data[8: 8 + 280]
     headStream = BytesIO()
+
     # 文件流回到开头
     util.fileWrite(dataHead, headStream)
     headStream.seek(0)
@@ -224,9 +223,7 @@ def dataWork(fread):
             PicData = []
             # 编号计数
             num = num + 1
-            print(num)
-            if num == 500:
-                break
+
         else:
             # 提取图像帧内容
             PicData = PicData + Data[:index]
@@ -247,8 +244,11 @@ def dataWork(fread):
 
 if __name__ == '__main__':
     f = BytesIO()
-    util.fileWrite([1, 2, 3, 4, 5, 6], f)
+    util.fileWrite([10, 11, 12, 13, 14, 15], f)
     f.seek(0)
+    a = f.read(1)
+    b = f.read(1)
+    c = f.read(1)
     print(util.getData(f, 6))
     # filename = 'sun_42697.dat'
     # f = open(filename, 'rb')
