@@ -75,16 +75,16 @@ def processHeader(stream: BytesIO):
     # 处理定位数据
     # 定位数据需要的内容为
     stream.read(6)  # 跳过时间码
-    stream.read(1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
+    stream.read(2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
     workMode = stream.read(1).hex()  # 获得载荷舱工作模式
     headDic['workMode'] = workMode
     stream.read(4)  # 跳过J2000时间
-    xPosition = struct.unpack('f', stream.read(4))  # 星务计算X位置(J2000坐标系, 同下)
-    yPosition = struct.unpack('f', stream.read(4))  # 星务计算Y位置
-    zPosition = struct.unpack('f', stream.read(4))  # 星务计算Z位置
-    xVelocity = struct.unpack('f', stream.read(4))  # 星务计算X速度
-    yVelocity = struct.unpack('f', stream.read(4))  # 星务计算Y速度
-    zVelocity = struct.unpack('f', stream.read(4))  # 星务计算Z速度
+    xPosition = struct.unpack('>f', stream.read(4))  # 星务计算X位置(J2000坐标系, 同下)
+    yPosition = struct.unpack('>f', stream.read(4))  # 星务计算Y位置
+    zPosition = struct.unpack('>f', stream.read(4))  # 星务计算Z位置
+    xVelocity = struct.unpack('>f', stream.read(4))  # 星务计算X速度
+    yVelocity = struct.unpack('>f', stream.read(4))  # 星务计算Y速度
+    zVelocity = struct.unpack('>f', stream.read(4))  # 星务计算Z速度
     headDic['SAT_POS1'] = xPosition
     headDic['SAT_POS2'] = yPosition
     headDic['SAT_POS3'] = zPosition
@@ -98,16 +98,16 @@ def processHeader(stream: BytesIO):
 
     # 载荷舱姿态数据（56）
     # 0~7（8） 载荷舱惯性四元数Q0（8字节双精度）
-    val_tuple = struct.unpack('d', stream.read(8))
+    val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q0"] = val_tuple[0]
     # 8~15（8） 载荷舱惯性四元数Q1（8字节双精度）
-    val_tuple = struct.unpack('d', stream.read(8))
+    val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q1"] = val_tuple[0]
     # 16~23（8） 载荷舱惯性四元数Q2（8字节双精度）
-    val_tuple = struct.unpack('d', stream.read(8))
+    val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q2"] = val_tuple[0]
     # 24~31（8） 载荷舱惯性四元数Q3（8字节双精度）
-    val_tuple = struct.unpack('d', stream.read(8))
+    val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q3"] = val_tuple[0]
     # 角速率32~55(24)
     stream.read(24)
@@ -124,11 +124,12 @@ def processHeader(stream: BytesIO):
     # 13~25（13）   电机2参数
     stream.read(13)
     # 26~29（4）    成像帧计数（无符号整型4位）
-    val_tuple = struct.unpack('I', stream.read(4))
+    val_tuple = struct.unpack('>I', stream.read(4))
     headDic["picframeCount"] = val_tuple[0]
     # 30~33(4)      帧内计数
-    val_tuple = struct.unpack('I', stream.read(4))
+    val_tuple = struct.unpack('>I', stream.read(4))
     headDic["frameCount"] = val_tuple[0]
+    print(repr(headDic))
     stream.close()
     return headDic
 
