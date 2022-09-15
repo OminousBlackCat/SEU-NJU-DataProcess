@@ -120,9 +120,51 @@ def processHeader(stream: BytesIO):
 
     # 望远镜工作参数（64）
     # 0~12（13） 电机1参数
-    stream.read(13)
+    # 0~3 电机1读出位置 无符号二进制整型
+    val_tuple = struct.unpack('>I', stream.read(4))
+    headDic["motor1Position"] = val_tuple[0]
+    # 4~5 电机1位置误差 无符号二进制整型
+    val_tuple = struct.unpack('>H', stream.read(2))
+    headDic["motor1PositionError"] = val_tuple[0]
+    # 6~7 电机1读出速度 无符号二进制整型
+    val_tuple = struct.unpack('>H', stream.read(2))
+    headDic["motor1Speed"] = val_tuple[0]
+    # 8~9 电机1读出电流 无符号二进制整型
+    val_tuple = struct.unpack('>H', stream.read(2))
+    headDic["motor1ElectricCurrent"] = val_tuple[0]
+    # 10 电机1状态 无符号二进制整型
+    val_tuple = struct.unpack('>B', stream.read(1))
+    headDic["motor1State"] = val_tuple[0]
+    # 11 电机1警报信息 无符号二进制整型
+    val_tuple = struct.unpack('>B', stream.read(1))
+    headDic["motor1Warning"] = val_tuple[0]
+    # 12 电机1传感器使用和超限信息 无符号二进制整型
+    val_tuple = struct.unpack('>B', stream.read(1))
+    headDic["motor1Sensor"] = val_tuple[0]
+
     # 13~25（13）   电机2参数
-    stream.read(13)
+    # 13~16 电机2读出位置 无符号二进制整型
+    val_tuple = struct.unpack('>I', stream.read(4))
+    headDic["motor2Position"] = val_tuple[0]
+    # 17~18 电机2位置误差 无符号二进制整型
+    val_tuple = struct.unpack('>H', stream.read(2))
+    headDic["motor2PositionError"] = val_tuple[0]
+    # 19~20 电机2读出速度 无符号二进制整型
+    val_tuple = struct.unpack('>H', stream.read(2))
+    headDic["motor2Speed"] = val_tuple[0]
+    # 21~22 电机2读出电流 无符号二进制整型
+    val_tuple = struct.unpack('>H', stream.read(2))
+    headDic["motor2ElectricCurrent"] = val_tuple[0]
+    # 23 电机2状态 无符号二进制整型
+    val_tuple = struct.unpack('>B', stream.read(1))
+    headDic["motor2State"] = val_tuple[0]
+    # 24 电机2警报信息 无符号二进制整型
+    val_tuple = struct.unpack('>B', stream.read(1))
+    headDic["motor2Warning"] = val_tuple[0]
+    # 25 电机2传感器使用和超限信息 无符号二进制整型
+    val_tuple = struct.unpack('>B', stream.read(1))
+    headDic["motor2Sensor"] = val_tuple[0]
+
     # 26~29（4）    成像帧计数（无符号整型4位）
     val_tuple = struct.unpack('>I', stream.read(4))
     headDic["picframeCount"] = val_tuple[0]
@@ -144,7 +186,7 @@ def processPicStream(data, num):
     util.fileWrite(dataHead, headStream)
     headStream.seek(0)
     # 去除自定义数据区
-    data = data[8 + 278:]
+    data = data[8 + 278 :]
     # 获取数据长度
     N = len(data)
     indexList = []
