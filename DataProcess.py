@@ -14,13 +14,13 @@ IV.
 
 from openjpeg import decode
 from astropy.io import fits
-from multiprocessing import JoinableQueue
+from multiprocessing import JoinableQueue, Pool, Process
 import numpy as np
 import DataProcessTools
 import config
 import os
 import sys
-import multiprocessing
+import time
 import util
 
 # 载入参数
@@ -45,10 +45,10 @@ except BaseException as exception:
 GLOBAL_FILE_SIZE = os.path.getsize(GLOBAL_INPUT_FILE_URL)  # 获得文件大小(Bytes)
 
 # 创造Iteration数组
-i = 0
-while i < GLOBAL_FILE_SIZE:
-    GLOBAL_MULTIPROCESS_LIST.append(i)
-    i = i + GLOBAL_CHUNK_SIZE
+iteration = 0
+while iteration < GLOBAL_FILE_SIZE:
+    GLOBAL_MULTIPROCESS_LIST.append(iteration)
+    iteration = iteration + GLOBAL_CHUNK_SIZE
 
 # 预读输出目录
 try:
@@ -61,16 +61,17 @@ except OSError as exception:
     util.log("创建输出文件夹失败或文件夹无写入权限")
     sys.exit("程序终止")
 
-
 # 读入文件, 创建共享内存(格式为mmap)
 # 已弃用: 使用mmap, mmap可以使文件立刻载入至内存, 略去之后的磁盘读取时间, mmap将作为每个子进程的全局数据, 对于linux, 其父进程fork()时将对此数据一并共享(会产生许多内存损耗)
 # 直接使用python的文件流 在多个进程进行共享读取, 速度并不会很慢
 # 如何控制写入队列是影响速度的关键
+queue = JoinableQueue()
 
-# 并行函数(worker函数), process pool中的每个进程都将执行此函数
-# 函数输入: 文件的开始比特数位
+
+# 并行(创造者/工人)函数(worker/producer函数), process pool中的每个进程都将执行此函数
+# 函数输入: 队列, 文件的开始比特数位
 # 函数处理完之后会给队列提交结果, consumer进程将监视队列进行文件写出工作
-def process_file(queue: JoinableQueue, start_byte: int):
+def process_file(start_byte: int):
     out_dict = {}
     with open(GLOBAL_INPUT_FILE_URL, 'rb') as input_file:
         input_file.seek(start_byte)
@@ -78,7 +79,22 @@ def process_file(queue: JoinableQueue, start_byte: int):
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
     queue.put(out_dict)
-    queue.join()
+
+
+# 处理(消费者)函数(consumer函数), 监视队列, 对队列里的元素进行处理
+# 函数输入: 队列
+def conduct_output():
+    while True:
+        try:
+            out_dic = queue.get(block=False)
+            # 开始处理dict
+            # TODO: 如何处理?
+        except queue.Empty:
+            time.sleep(10)
+            # TODO: 如果一直空保持一段时间就结束消费者函数 这种做法是否合适？
+            if queue.empty():
+                return
+            pass
 
 
 # 传入的jpList为file stream的list
@@ -106,13 +122,12 @@ def createFits(image, header, outDir):
 
 # 程序入口函数
 def main():
-    tempList = []
-    with open('jp2/SCSY1_KSC_HIS_20220808_004514.dat', 'rb') as testFile:
-        tempList = DataProcessTools.dataWork(testFile)
-    for i in range(len(tempList)):
-        if i == 200:
-            image = jointJP2(tempList[i][1])
-            createFits(image, None, 'jp2/a.fits')
+    worker_pool = Pool(processes=GLOBAL_MULTIPROCESS_COUNT)
+    worker_pool.map(process_file, GLOBAL_MULTIPROCESS_LIST)
+    consumer = Process(target=conduct_output, args=())
+    consumer.start()
+    worker_pool.close()
+    worker_pool.join()
 
 
 if __name__ == '__main__':
