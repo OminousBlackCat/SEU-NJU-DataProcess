@@ -1,4 +1,5 @@
 import struct
+import datetime
 
 
 # 获取下一个字节数据
@@ -64,3 +65,9 @@ def getResult(target):
     for i in target:
         ans = (ans << 8) + i
     return ans
+
+
+# 输出辅助函数
+def log(text: str):
+    print(datetime.datetime.now().strftime("[YYYY-mm-dd-hh:MM:ss]") + text)
+
