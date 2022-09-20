@@ -177,7 +177,7 @@ def processHeader(stream: BytesIO):
 
 
 # 对图片帧文件进行处理
-def processPicStream(data, num):
+def processPicStream(data):
     # 提取自定义数据区
     dataHead = data[8: 8 + 280]
     headStream = BytesIO()
@@ -233,16 +233,24 @@ def dataWork(fread):
     # 记录数据
     Data = []
     # 存储所有图片信息
-    allData = []
+    header_data = []
+    pic_data = []
+
 
     # 寻找数据帧的开头
     while findFrameHead(fread, head_data) == 1:
         # 记录头部份
-        MainHead = util.getData(fread, 8)
+        MainHead,not_error = util.getData(fread, 8)
+        if not_error:
+            break
         # 提取数据部分
-        Data = Data + util.getData(fread, 2032)
+        Data,not_error = Data + util.getData(fread, 2032)
+        if not_error:
+            break
         # 记录错误控制内容
-        ErrorControl = util.getData(fread, 4)
+        ErrorControl,not_error = util.getData(fread, 4)
+        if not_error:
+            break
         # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
         index = findPicHead(Data)
         # 最终输出的头部信息 应该是个字典
@@ -259,9 +267,11 @@ def dataWork(fread):
             # 无用内容不处理
             if num > 0:
                 # 处理图像帧内容
-                headerData, picList = processPicStream(PicData, num)
-                # 存储图片信息
-                allData.append([deepcopy(headerData), deepcopy(picList)])
+                headerData, picList = processPicStream(PicData)
+                # 存储图片头部信息
+                header_data.append(deepcopy(headerData))
+                # 储存图片信息
+                pic_data.append(deepcopy(picList))
             # 情况图像帧
             PicData = []
             # 编号计数
@@ -273,16 +283,106 @@ def dataWork(fread):
             # 保留可能出现数据头的内容
             Data = Data[index:]
             # 无用内容不处理
-    # if num > 0:
-    #     # 处理图像帧内容
-    #     headerData, picList = processPicStream(PicData, num)
-    #     # 存储图片信息
-    #     allData.append([deepcopy(headerData), deepcopy(picList)])
+    if num > 0 and len(PicData) > 1000:
+        try:
+            # 处理图像帧内容
+            headerData, picList = processPicStream(PicData)
+            # 存储图片头部信息
+            header_data.append(deepcopy(headerData))
+            # 储存图片信息
+            pic_data.append(deepcopy(picList))
+        except BaseException as exception:
+            # 文件读完返回-1
+            print("剩余文件无法形成单独图像")
     # 输出处理信息
     print("无数据头，解压结束")
     print("发现图片帧：" + str(num))
     # 输出所有图片信息
-    return allData
+    return header_data, pic_data
+
+# 用于并行工作
+# 输入为文件楼，起始字符地址，终止地址坐标
+def parallel_work(fread,start_byte,end_byte):
+    # 寻找文件的开头位置
+    fread.seek(start_byte)
+    # num统计读取文件数量
+    num = 0
+    # 记录图片帧内容
+    PicData = []
+    # 记录数据
+    Data = []
+    # 存储所有图片信息
+    header_data = []
+    pic_data = []
+    # 寻找数据帧的开头
+    while findFrameHead(fread, head_data) == 1:
+        # 记录头部份
+        MainHead, not_error = util.getData(fread, 8)
+        if not_error:
+            break
+        # 提取数据部分
+        Data, not_error = Data + util.getData(fread, 2032)
+        if not_error:
+            break
+        # 记录错误控制内容
+        ErrorControl, not_error = util.getData(fread, 4)
+        if not_error:
+            break
+        # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
+        index = findPicHead(Data)
+        # 最终输出的头部信息 应该是个字典
+        headerData = None
+        # 需要拼接图像list
+        picList = None
+
+        # 判断有无出现数据帧开头
+        if index < len(Data) - 7:
+            # 记录新图像帧之前的内容
+            PicData = PicData + Data[:index]
+            # 去除提取的内容
+            Data = Data[index + 8:]
+            # 无用内容不处理
+            if num > 0:
+                # 处理图像帧内容
+                headerData, picList = processPicStream(PicData)
+                # 存储图片头部信息
+                header_data.append(deepcopy(headerData))
+                # 储存图片信息
+                pic_data.append(deepcopy(picList))
+                # 判断终止条件
+                if fread.seek() > end_byte:
+                    PicData = []
+                    break
+            # 情况图像帧
+            PicData = []
+            # 编号计数
+            num = num + 1
+            #
+        else:
+            # 提取图像帧内容
+            PicData = PicData + Data[:index]
+            # 保留可能出现数据头的内容
+            Data = Data[index:]
+            # 无用内容不处理
+        if 1.5 * (end_byte - start_byte) > fread.seek - start_byte:
+            break
+
+    if num > 0 and len(PicData) > 10000:
+        try:
+            # 处理图像帧内容
+            headerData, picList = processPicStream(PicData)
+            # 存储图片头部信息
+            header_data.append(deepcopy(headerData))
+            # 储存图片信息
+            pic_data.append(deepcopy(picList))
+        except BaseException as exception:
+            # 文件读完返回-1
+            print("剩余文件无法形成单独图像")
+    # 输出处理信息
+    # print("无数据头，解压结束")
+    # print("发现图片帧：" + str(num))
+    # 输出所有图片信息
+    return header_data, pic_data
 
 
 if __name__ == '__main__':

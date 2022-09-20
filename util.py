@@ -22,11 +22,13 @@ def getNext(fread):
 # 连续读取nums个字节
 def getData(fread, nums):
     data = []
+    error = True
     for i in range(nums):
         # 读取字符
         x = getNext(fread)
         if x == -1:
             # 无内容用0补齐
+            error = False
             data.append(0)
             break
         else:
@@ -36,7 +38,7 @@ def getData(fread, nums):
     while len(data) < nums:
         data.append(0)
     # 返回内容
-    return data
+    return data,error
 
 
 # 写二进制文件
