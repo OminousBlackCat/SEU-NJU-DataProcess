@@ -349,10 +349,11 @@ def parallel_work(fread, start_byte):
             if num > 0:
                 # 处理图像帧内容
                 headerData, picList = processPicStream(PicData)
-                # 存储图片头部信息
-                header_data.append(deepcopy(headerData))
-                # 储存图片信息
-                pic_data.append(deepcopy(picList))
+                if len(picList) == 6:
+                    # 存储图片头部信息
+                    header_data.append(deepcopy(headerData))
+                    # 储存图片信息
+                    pic_data.append(deepcopy(picList))
                 # 判断终止条件
                 if fread.seek() > end_byte:
                     PicData = []
@@ -374,10 +375,11 @@ def parallel_work(fread, start_byte):
         try:
             # 处理图像帧内容
             headerData, picList = processPicStream(PicData)
-            # 存储图片头部信息
-            header_data.append(deepcopy(headerData))
-            # 储存图片信息
-            pic_data.append(deepcopy(picList))
+            if len(picList) == 6:
+                # 存储图片头部信息
+                header_data.append(deepcopy(headerData))
+                # 储存图片信息
+                pic_data.append(deepcopy(picList))
         except BaseException as exception:
             # 文件读完返回-1
             print("剩余文件无法形成单独图像")
