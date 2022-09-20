@@ -14,7 +14,7 @@ IV.
 
 from openjpeg import decode
 from astropy.io import fits
-from multiprocessing import JoinableQueue, Pool, Process, Value
+from multiprocessing import Manager, Pool, Process, Value, freeze_support
 import numpy as np
 import DataProcessTools
 import config
@@ -67,14 +67,13 @@ except OSError as exception:
 # 已弃用: 使用mmap, mmap可以使文件立刻载入至内存, 略去之后的磁盘读取时间, mmap将作为每个子进程的全局数据, 对于linux, 其父进程fork()时将对此数据一并共享(会产生许多内存损耗)
 # 直接使用python的文件流 在多个进程进行共享读取, 速度并不会很慢
 # 如何控制写入队列是影响速度的关键
-queue = JoinableQueue()
 terminal_signal = Value('i', 0)
 
 
 # 并行(创造者/工人)函数(worker/producer函数), process pool中的每个进程都将执行此函数
 # 函数输入: 队列, 文件的开始比特数位
 # 函数处理完之后会给队列提交结果, consumer进程将监视队列进行文件写出工作
-def process_file(start_byte: int):
+def process_file(start_byte: int, queue: Manager().Queue):
     util.log("解析帧中...开始比特位为:" + str(start_byte))
     out_dict = {
         'image_list': [],
@@ -86,16 +85,17 @@ def process_file(start_byte: int):
         out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(input_file, start_byte)
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
-    util.log(repr(out_dict))
+    util.log("此块解析成功!")
     queue.put(out_dict)
-    queue.task_done()
+    util.log("A: " + str(queue.qsize()))
 
 
 # 处理(消费者)函数(consumer函数), 监视队列, 对队列里的元素进行处理
 # 函数输入: 队列
-def conduct_output():
+def conduct_output(queue: Manager().Queue):
     while True:
-        try:
+        if not queue.empty():
+            util.log("B: " + str(queue.qsize()))
             out_dic = queue.get(block=False)
             util.log("开始处理文件...")
             # 开始处理dict
@@ -123,8 +123,8 @@ def conduct_output():
                 # 输出文件
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
                 currentHDUList.writeto(GLOBAL_OUTPUT_DIR + datetime.datetime.now().strftime("%H-%M-%S.fits"), overwrite=True)
-        except BaseException as e:
-            util.log(str(e) + "队列为空...当前结束标识为: " + str(terminal_signal.value))
+        else:
+            util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
             time.sleep(10)
             if terminal_signal.value == 1:
                 return
@@ -133,10 +133,12 @@ def conduct_output():
 
 # 程序入口函数
 def main():
-    worker_pool = Pool(processes=GLOBAL_MULTIPROCESS_COUNT)
-    worker_pool.map(process_file, GLOBAL_MULTIPROCESS_LIST)
-    consumer = Process(target=conduct_output, args=())
+    queue = Manager().Queue()
+    consumer = Process(target=conduct_output, args=(queue,))
     consumer.start()
+    worker_pool = Pool(processes=GLOBAL_MULTIPROCESS_COUNT)
+    for index in GLOBAL_MULTIPROCESS_LIST:
+        worker_pool.apply_async(process_file, (index, queue))
     worker_pool.close()
     worker_pool.join()
     queue.join()

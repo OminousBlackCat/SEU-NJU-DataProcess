@@ -86,12 +86,12 @@ def processHeader(stream: BytesIO):
     xVelocity = struct.unpack('>f', stream.read(4))  # 星务计算X速度
     yVelocity = struct.unpack('>f', stream.read(4))  # 星务计算Y速度
     zVelocity = struct.unpack('>f', stream.read(4))  # 星务计算Z速度
-    headDic['SAT_POS1'] = xPosition
-    headDic['SAT_POS2'] = yPosition
-    headDic['SAT_POS3'] = zPosition
-    headDic['SAT_VEL1'] = xVelocity
-    headDic['SAT_VEL2'] = yVelocity
-    headDic['SAT_VEL3'] = zVelocity
+    headDic['SAT_POS1'] = xPosition[0]
+    headDic['SAT_POS2'] = yPosition[0]
+    headDic['SAT_POS3'] = zPosition[0]
+    headDic['SAT_VEL1'] = xVelocity[0]
+    headDic['SAT_VEL2'] = yVelocity[0]
+    headDic['SAT_VEL3'] = zVelocity[0]
     # 总读头移动数: 6 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 * 6 = 69
 
     # 定轨数据(58)
@@ -172,7 +172,6 @@ def processHeader(stream: BytesIO):
     # 30~33(4)      帧内计数
     val_tuple = struct.unpack('>I', stream.read(4))
     headDic["frameCount"] = val_tuple[0]
-    print(repr(headDic))
     stream.close()
     return headDic
 
@@ -354,7 +353,7 @@ def parallel_work(fread, start_byte):
                 # 储存图片信息
                 pic_data.append(deepcopy(picList))
                 # 判断终止条件
-                if fread.seek() > end_byte:
+                if fread.tell() > end_byte:
                     PicData = []
                     break
             # 情况图像帧
@@ -368,7 +367,7 @@ def parallel_work(fread, start_byte):
             # 保留可能出现数据头的内容
             Data = Data[index:]
             # 无用内容不处理
-        if 1.5 * (end_byte - start_byte) < fread.seek() - start_byte:
+        if 1.5 * (end_byte - start_byte) < fread.tell() - start_byte:
             break
     if num > 0 and len(PicData) > 10000:
         try:
