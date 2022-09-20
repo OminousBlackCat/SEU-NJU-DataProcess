@@ -14,12 +14,13 @@ IV.
 
 from openjpeg import decode
 from astropy.io import fits
-from multiprocessing import JoinableQueue, Pool, Process
+from multiprocessing import JoinableQueue, Pool, Process, Value
 import numpy as np
 import DataProcessTools
 import config
 import os
 import sys
+import datetime
 import time
 import util
 
@@ -38,6 +39,7 @@ try:
     with open(GLOBAL_INPUT_FILE_URL, 'rb') as tempFile:
         tempFile.seek(0)  # seek一次查看是否有读取权限, 如果没有则会产生OSError
         tempFile.close()  # 成功则直接关闭 继续
+        util.log("预读文件成功")
 except BaseException as exception:
     util.log(str(exception))
     util.log("文件读取失败, 请检查文件路径是否输入正确以及是否拥有读取权限")
@@ -66,19 +68,26 @@ except OSError as exception:
 # 直接使用python的文件流 在多个进程进行共享读取, 速度并不会很慢
 # 如何控制写入队列是影响速度的关键
 queue = JoinableQueue()
+terminal_signal = Value('i', 0)
 
 
 # 并行(创造者/工人)函数(worker/producer函数), process pool中的每个进程都将执行此函数
 # 函数输入: 队列, 文件的开始比特数位
 # 函数处理完之后会给队列提交结果, consumer进程将监视队列进行文件写出工作
 def process_file(start_byte: int):
-    out_dict = {}
+    util.log("解析帧中...开始比特位为:" + str(start_byte))
+    out_dict = {
+        'image_list': [],
+        'head_list': []
+    }
     with open(GLOBAL_INPUT_FILE_URL, 'rb') as input_file:
         input_file.seek(start_byte)
         # TODO: 等待对接
+        out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(input_file, start_byte)
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
     queue.put(out_dict)
+    queue.task_done()
 
 
 # 处理(消费者)函数(consumer函数), 监视队列, 对队列里的元素进行处理
@@ -87,37 +96,38 @@ def conduct_output():
     while True:
         try:
             out_dic = queue.get(block=False)
+            util.log("开始处理文件...")
             # 开始处理dict
             # TODO: 如何处理?
-        except queue.Empty:
+            image_list = out_dic['image_list']
+            head_list = out_dic['head_list']
+            for index in range(len(image_list)):
+                # 每个元素代表了一个fits文件
+                current_image = []
+                for stream in image_list[index]:
+                    # 将jp2文件流转为二维图像数组
+                    # jp2的shape应为(188, 384)
+                    # 188为Y axis shape, 384为 X axis shape
+                    current_image.append(decode(stream))
+                childShape = current_image[0].shape
+                completeImage = np.zeros((childShape[0], childShape[1] * 6))
+                # 合并图像
+                for child_index in range(len(current_image)):
+                    completeImage[:, child_index * childShape[1]: (child_index + 1) * childShape[1]] \
+                        = current_image[child_index]
+                # 构造header
+                currentHeader = fits.Header()
+                for key in head_list[index].keys():
+                    currentHeader.set(key, head_list[index][key])
+                # 输出文件
+                currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
+                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + datetime.datetime.now().strftime("%H-%M-%S.fits"), overwrite=True)
+        except BaseException as e:
+            util.log(str(e) + "队列为空...当前结束标识为: " + str(terminal_signal.value))
             time.sleep(10)
-            # TODO: 如果一直空保持一段时间就结束消费者函数 这种做法是否合适？
-            if queue.empty():
+            if terminal_signal.value == 1:
                 return
             pass
-
-
-# 传入的jpList为file stream的list
-# list内的每个元素为一个JP2文件的stream
-def jointJP2(jpList):
-    imageList = []
-    for stream in jpList:
-        # 将jp2文件流转为二维图像数组
-        # jp2的shape应为(188, 384)
-        # 188为Y axis shape, 384为 X axis shape
-        imageList.append(decode(stream))
-    childShape = imageList[0].shape
-    print(childShape)
-    completeImage = np.zeros((childShape[0], childShape[1] * 6))
-    for i in range(len(imageList)):
-        completeImage[:, i * childShape[1]: (i + 1) * childShape[1]] = imageList[i]
-    return completeImage
-
-
-# 创建fits文件, 将数据, 头部写入文件, 输出到指定目录
-def createFits(image, header, outDir):
-    tempHDUList = fits.HDUList(fits.PrimaryHDU(image, header))
-    tempHDUList.writeto(outDir, overwrite=True)
 
 
 # 程序入口函数
@@ -128,6 +138,9 @@ def main():
     consumer.start()
     worker_pool.close()
     worker_pool.join()
+    queue.join()
+    util.log("当前队列已经为空!")
+    terminal_signal.value = 1
 
 
 if __name__ == '__main__':

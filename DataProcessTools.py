@@ -187,7 +187,7 @@ def processPicStream(data):
     util.fileWrite(dataHead, headStream)
     headStream.seek(0)
     # 去除自定义数据区
-    data = data[8 + 278 :]
+    data = data[8 + 278:]
     # 获取数据长度
     N = len(data)
     indexList = []
@@ -237,19 +237,18 @@ def dataWork(fread):
     header_data = []
     pic_data = []
 
-
     # 寻找数据帧的开头
     while findFrameHead(fread, head_data) == 1:
         # 记录头部份
-        MainHead,not_error = util.getData(fread, 8)
+        MainHead, not_error = util.getData(fread, 8)
         if not_error:
             break
         # 提取数据部分
-        Data,not_error = Data + util.getData(fread, 2032)
+        Data, not_error = Data + util.getData(fread, 2032)
         if not_error:
             break
         # 记录错误控制内容
-        ErrorControl,not_error = util.getData(fread, 4)
+        ErrorControl, not_error = util.getData(fread, 4)
         if not_error:
             break
         # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
@@ -301,10 +300,11 @@ def dataWork(fread):
     # 输出所有图片信息
     return header_data, pic_data
 
+
 # 用于并行工作
 # 输入为文件楼，起始字符地址，终止地址坐标
-def parallel_work(fread,start_byte):
-    #确定文件末尾位置
+def parallel_work(fread, start_byte):
+    # 确定文件末尾位置
     end_byte = start_byte + config.iteration_chunk_size
     # 寻找文件的开头位置
     fread.seek(start_byte)
@@ -369,7 +369,7 @@ def parallel_work(fread,start_byte):
             # 无用内容不处理
         if 1.5 * (end_byte - start_byte) < fread.seek() - start_byte:
             break
-
+    util.log("***")
     if num > 0 and len(PicData) > 10000:
         try:
             # 处理图像帧内容
@@ -385,6 +385,7 @@ def parallel_work(fread,start_byte):
     # print("无数据头，解压结束")
     # print("发现图片帧：" + str(num))
     # 输出所有图片信息
+    util.log(repr(head_data[0]))
     return header_data, pic_data
 
 
