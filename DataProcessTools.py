@@ -324,9 +324,10 @@ def parallel_work(fread, start_byte):
         if not not_error:
             break
         # 提取数据部分
-        Data, not_error = Data + util.getData(fread, 2032)
+        Data1, not_error = util.getData(fread, 2032)
         if not not_error:
             break
+        Data = Data + deepcopy(Data1)
         # 记录错误控制内容
         ErrorControl, not_error = util.getData(fread, 4)
         if not not_error:
