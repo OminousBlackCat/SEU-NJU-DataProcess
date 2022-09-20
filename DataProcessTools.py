@@ -292,10 +292,10 @@ def dataWork(fread):
             pic_data.append(deepcopy(picList))
         except BaseException as exception:
             # 文件读完返回-1
-            print("剩余文件无法形成单独图像")
+            util.log("剩余文件无法形成单独图像")
     # 输出处理信息
-    print("无数据头，解压结束")
-    print("发现图片帧：" + str(num))
+    util.log("无数据头，解压结束")
+    util.log("发现图片帧：" + str(num))
     # 输出所有图片信息
     return header_data, pic_data
 
@@ -381,7 +381,7 @@ def parallel_work(fread, start_byte):
                 pic_data.append(deepcopy(picList))
         except BaseException as exception:
             # 文件读完返回-1
-            print("剩余文件无法形成单独图像")
+            util.log("剩余文件无法形成单独图像")
     # 输出处理信息
     # print("无数据头，解压结束")
     # print("发现图片帧：" + str(num))

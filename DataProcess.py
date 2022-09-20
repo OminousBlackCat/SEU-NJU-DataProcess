@@ -68,13 +68,13 @@ except OSError as exception:
 # 直接使用python的文件流 在多个进程进行共享读取, 速度并不会很慢
 # 如何控制写入队列是影响速度的关键
 terminal_signal = Value('i', 0)
+output_count = Value('i', 0)
 
 
 # 并行(创造者/工人)函数(worker/producer函数), process pool中的每个进程都将执行此函数
 # 函数输入: 队列, 文件的开始比特数位
 # 函数处理完之后会给队列提交结果, consumer进程将监视队列进行文件写出工作
 def process_file(start_byte: int, queue: Manager().Queue):
-    util.log("解析帧中...开始比特位为:" + str(start_byte))
     out_dict = {
         'image_list': [],
         'head_list': []
@@ -85,9 +85,8 @@ def process_file(start_byte: int, queue: Manager().Queue):
         out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(input_file, start_byte)
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
-    util.log("此块解析成功!")
     queue.put(out_dict)
-    util.log("A: " + str(queue.qsize()))
+    util.log("此块解析成功!  当前队列剩余文件: " + str(queue.qsize()))
 
 
 # 处理(消费者)函数(consumer函数), 监视队列, 对队列里的元素进行处理
@@ -95,9 +94,8 @@ def process_file(start_byte: int, queue: Manager().Queue):
 def conduct_output(queue: Manager().Queue):
     while True:
         if not queue.empty():
-            util.log("B: " + str(queue.qsize()))
             out_dic = queue.get(block=False)
-            util.log("开始处理文件...")
+            util.log("开始处理文件..." + "当前队列内文件: " + str(queue.qsize()))
             # 开始处理dict
             # TODO: 如何处理?
             image_list = out_dic['image_list']
@@ -122,10 +120,12 @@ def conduct_output(queue: Manager().Queue):
                     currentHeader.set(key, head_list[index][key])
                 # 输出文件
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
-                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + datetime.datetime.now().strftime("%H-%M-%S.fits"), overwrite=True)
+                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + datetime.datetime.now().strftime("%H-%M-%S-")
+                                       + str(output_count.value) + '.fits', overwrite=True)
+                output_count.value += 1
         else:
             util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
-            time.sleep(10)
+            time.sleep(1)
             if terminal_signal.value == 1:
                 return
             pass
@@ -134,8 +134,11 @@ def conduct_output(queue: Manager().Queue):
 # 程序入口函数
 def main():
     queue = Manager().Queue()
-    consumer = Process(target=conduct_output, args=(queue,))
-    consumer.start()
+    consumer_list = []
+    for j in range(3):
+        consumer_list.append(Process(target=conduct_output, args=(queue,)))
+    for j in range(3):
+        consumer_list[j].start()
     worker_pool = Pool(processes=GLOBAL_MULTIPROCESS_COUNT)
     for index in GLOBAL_MULTIPROCESS_LIST:
         worker_pool.apply_async(process_file, (index, queue))

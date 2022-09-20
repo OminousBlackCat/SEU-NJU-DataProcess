@@ -12,9 +12,9 @@ def getNext(fread):
         # 输出结果
         return int(val_tuple[0])
     except BaseException as exception:
-        print(exception)
+        log(str(exception))
         # 文件读完返回-1
-        print("文件已读完")
+        log("文件已读完")
         return -1
 
 
