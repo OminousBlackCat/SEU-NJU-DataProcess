@@ -369,7 +369,6 @@ def parallel_work(fread, start_byte):
             # 无用内容不处理
         if 1.5 * (end_byte - start_byte) < fread.seek() - start_byte:
             break
-    util.log("***")
     if num > 0 and len(PicData) > 10000:
         try:
             # 处理图像帧内容
@@ -385,7 +384,6 @@ def parallel_work(fread, start_byte):
     # print("无数据头，解压结束")
     # print("发现图片帧：" + str(num))
     # 输出所有图片信息
-    util.log(repr(head_data[0]))
     return header_data, pic_data
 
 

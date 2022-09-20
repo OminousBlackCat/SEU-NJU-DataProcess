@@ -86,6 +86,7 @@ def process_file(start_byte: int):
         out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(input_file, start_byte)
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
+    util.log(repr(out_dict))
     queue.put(out_dict)
     queue.task_done()
 
