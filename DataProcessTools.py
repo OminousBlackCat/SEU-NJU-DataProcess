@@ -303,7 +303,7 @@ def dataWork(fread):
 
 # 用于并行工作
 # 输入为文件楼，起始字符地址，终止地址坐标
-def parallel_work(fread,start_byte,end_byte):
+def parallel_work(fread,start_byte):
     #确定文件末尾位置
     end_byte = start_byte + config.iteration_chunk_size
     # 寻找文件的开头位置
