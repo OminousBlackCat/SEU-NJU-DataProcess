@@ -364,7 +364,7 @@ def parallel_work(fread,start_byte,end_byte):
             # 保留可能出现数据头的内容
             Data = Data[index:]
             # 无用内容不处理
-        if 1.5 * (end_byte - start_byte) > fread.seek - start_byte:
+        if 1.5 * (end_byte - start_byte) < fread.seek() - start_byte:
             break
 
     if num > 0 and len(PicData) > 10000:
