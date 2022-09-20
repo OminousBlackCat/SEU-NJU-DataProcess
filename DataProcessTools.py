@@ -321,15 +321,15 @@ def parallel_work(fread,start_byte):
     while findFrameHead(fread, head_data) == 1:
         # 记录头部份
         MainHead, not_error = util.getData(fread, 8)
-        if not_error:
+        if not not_error:
             break
         # 提取数据部分
         Data, not_error = Data + util.getData(fread, 2032)
-        if not_error:
+        if not not_error:
             break
         # 记录错误控制内容
         ErrorControl, not_error = util.getData(fread, 4)
-        if not_error:
+        if not not_error:
             break
         # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
         index = findPicHead(Data)
