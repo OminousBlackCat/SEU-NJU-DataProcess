@@ -31,6 +31,7 @@ GLOBAL_OUTPUT_DIR = config.output_dir
 GLOBAL_FILE_SIZE = None  # 文件大小, 单位(Byte)
 GLOBAL_MULTIPROCESS_LIST = []  # 迭代数组, 存储了每次执行并行函数时的参数
 GLOBAL_CHUNK_SIZE = config.iteration_chunk_size
+GLOBAL_WRITER_COUNT = config.writer_process_count
 
 # 预读文件, 预读文件大小
 try:
@@ -135,9 +136,9 @@ def conduct_output(queue: Manager().Queue):
 def main():
     queue = Manager().Queue()
     consumer_list = []
-    for j in range(3):
+    for j in range(GLOBAL_WRITER_COUNT):
         consumer_list.append(Process(target=conduct_output, args=(queue,)))
-    for j in range(3):
+    for j in range(GLOBAL_WRITER_COUNT):
         consumer_list[j].start()
     worker_pool = Pool(processes=GLOBAL_MULTIPROCESS_COUNT)
     for index in GLOBAL_MULTIPROCESS_LIST:
