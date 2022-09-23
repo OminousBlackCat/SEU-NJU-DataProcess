@@ -24,6 +24,7 @@ import datetime
 import time
 import util
 import csv
+import header
 
 # 载入参数
 GLOBAL_MULTIPROCESS_COUNT = config.multiprocess_count
@@ -71,10 +72,11 @@ except OSError as exception:
     sys.exit("程序终止")
 
 # 创建csv文件, 每个dat文件对应一个csv
-csv_file_name = datetime.datetime.now().strftime('RSM%Y%m%d%H%M%S.csv')
+csv_file_name = datetime.datetime.now().strftime('RSM%Y%m%d%H%M%S.csv')  # TODO: 这里的时间需不需要改一下
 with open(csv_file_name, 'wb') as csv_file:
     file_writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    
+    file_writer.writerow(header.all_header_list)
+
 
 # 读入文件, 创建共享内存(格式为mmap)
 # 已弃用: 使用mmap, mmap可以使文件立刻载入至内存, 略去之后的磁盘读取时间, mmap将作为每个子进程的全局数据, 对于linux, 其父进程fork()时将对此数据一并共享(会产生许多内存损耗)
