@@ -26,6 +26,12 @@ input_file_url = "jp2/SCSY1_KSC_HIS_20220808_004514.dat"
 # TODO: 程序输出参数
 output_dir = "jp2/"
 
+# 程序输出csv文件的目录(由于数据目录文件量过大, 选择输出在不同文件夹), 文件命名按照日期
+# 完整示例: /data/chase/Chase/Lev1/2022/csv/
+# 如果程序检测不到文件夹则会连带父目录一起创建
+# type: str
+output_csv_dir = "jp2/"
+
 # 写入进程的数量, 在磁盘阵列写入效率较高的情况下可以选择增加此参数
 # 一般不需要修改此参数
 # type: int

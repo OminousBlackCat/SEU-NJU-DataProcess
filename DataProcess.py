@@ -23,6 +23,7 @@ import sys
 import datetime
 import time
 import util
+import csv
 
 # 载入参数
 GLOBAL_MULTIPROCESS_COUNT = config.multiprocess_count
@@ -32,6 +33,7 @@ GLOBAL_FILE_SIZE = None  # 文件大小, 单位(Byte)
 GLOBAL_MULTIPROCESS_LIST = []  # 迭代数组, 存储了每次执行并行函数时的参数
 GLOBAL_CHUNK_SIZE = config.iteration_chunk_size
 GLOBAL_WRITER_COUNT = config.writer_process_count
+GLOBAL_CSV_DIR = config.output_csv_dir
 
 # 预读文件, 预读文件大小
 try:
@@ -53,16 +55,26 @@ while iteration < GLOBAL_FILE_SIZE:
     GLOBAL_MULTIPROCESS_LIST.append(iteration)
     iteration = iteration + GLOBAL_CHUNK_SIZE
 
-# 预读输出目录
+# 预读两种输出目录
 try:
     if not os.path.exists(GLOBAL_OUTPUT_DIR):
         os.makedirs(GLOBAL_OUTPUT_DIR)
+    if not os.path.exists(GLOBAL_CSV_DIR):
+        os.makedirs(GLOBAL_CSV_DIR)
     if not os.access(GLOBAL_OUTPUT_DIR, os.W_OK):
+        raise OSError
+    if not os.access(GLOBAL_CSV_DIR, os.W_OK):
         raise OSError
 except OSError as exception:
     util.log(str(exception))
     util.log("创建输出文件夹失败或文件夹无写入权限")
     sys.exit("程序终止")
+
+# 创建csv文件, 每个dat文件对应一个csv
+csv_file_name = datetime.datetime.now().strftime('RSM%Y%m%d%H%M%S.csv')
+with open(csv_file_name, 'wb') as csv_file:
+    file_writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    
 
 # 读入文件, 创建共享内存(格式为mmap)
 # 已弃用: 使用mmap, mmap可以使文件立刻载入至内存, 略去之后的磁盘读取时间, mmap将作为每个子进程的全局数据, 对于linux, 其父进程fork()时将对此数据一并共享(会产生许多内存损耗)
@@ -82,7 +94,6 @@ def process_file(start_byte: int, queue: Manager().Queue):
     }
     with open(GLOBAL_INPUT_FILE_URL, 'rb') as input_file:
         input_file.seek(start_byte)
-        # TODO: 等待对接
         out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(input_file, start_byte)
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
