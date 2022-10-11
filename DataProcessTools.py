@@ -131,15 +131,23 @@ def processHeader(stream: BytesIO):
 
     # 定轨数据(58)
     #stream.read(58)
-    sign2 = stream.read(1).hex()  # 定轨标志2
-    starNum2 = stream.read(1).hex()  # 可用星数2
-    StimeS = struct.unpack('>I', stream.read(4))  # 瞬根J2000时间整秒
-    orbitA = struct.unpack('>I', stream.read(4)) # 瞬根轨道半长轴(a)
-    orbitE = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(e)
-    orbitI = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(i)
-    orbitO = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(Ω)
-    orbitW = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(w)
-    orbitM = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(M)
+    headList.append(stream.read(1).hex()) # 定轨标志2
+    headList.append(stream.read(1).hex())  # 可用星数2
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根J2000时间整秒
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根轨道半长轴(a)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根轨道半长轴(e)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根轨道半长轴(i)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根轨道半长轴(Ω)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根轨道半长轴(w)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根轨道半长轴(M)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根J2000时间整秒
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(a)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(e)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(i)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(Ω)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(w)
+    headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(M)
+
 
 
 
@@ -147,20 +155,34 @@ def processHeader(stream: BytesIO):
     # 0~7（8） 载荷舱惯性四元数Q0（8字节双精度）
     val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q0"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 8~15（8） 载荷舱惯性四元数Q1（8字节双精度）
     val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q1"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 16~23（8） 载荷舱惯性四元数Q2（8字节双精度）
     val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q2"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 24~31（8） 载荷舱惯性四元数Q3（8字节双精度）
     val_tuple = struct.unpack('>d', stream.read(8))
     headDic["Q3"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 角速率32~55(24)
-    stream.read(24)
+    headList.append(struct.unpack('>d', stream.read(8))[0])  # 载荷舱角速率X
+    headList.append(struct.unpack('>d', stream.read(8))[0])  # 载荷舱角速率y
+    headList.append(struct.unpack('>d', stream.read(8))[0])  # 载荷舱角速率z
 
     # 平台舱姿态数据（28）
-    stream.read(28)
+    #stream.read(28)
+    headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱惯性四元数Q0
+    headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱惯性四元数Q1
+    headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱惯性四元数Q2
+    headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱惯性四元数Q3
+    headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱角速率X
+    headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱角速率Y
+    headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱角速率Z
+
 
     # 温度数据（2）
     stream.read(2)
@@ -170,56 +192,93 @@ def processHeader(stream: BytesIO):
     # 0~3 电机1读出位置 无符号二进制整型
     val_tuple = struct.unpack('>I', stream.read(4))
     headDic["motor1Position"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 4~5 电机1位置误差 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
     headDic["motor1PositionError"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 6~7 电机1读出速度 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
     headDic["motor1Speed"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 8~9 电机1读出电流 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
     headDic["motor1ElectricCurrent"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 10 电机1状态 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
     headDic["motor1State"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 11 电机1警报信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
     headDic["motor1Warning"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 12 电机1传感器使用和超限信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
     headDic["motor1Sensor"] = val_tuple[0]
+    headList.append(val_tuple[0])
 
     # 13~25（13）   电机2参数
     # 13~16 电机2读出位置 无符号二进制整型
     val_tuple = struct.unpack('>I', stream.read(4))
     headDic["motor2Position"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 17~18 电机2位置误差 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
     headDic["motor2PositionError"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 19~20 电机2读出速度 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
     headDic["motor2Speed"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 21~22 电机2读出电流 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
     headDic["motor2ElectricCurrent"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 23 电机2状态 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
     headDic["motor2State"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 24 电机2警报信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
     headDic["motor2Warning"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 25 电机2传感器使用和超限信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
     headDic["motor2Sensor"] = val_tuple[0]
+    headList.append(val_tuple[0])
 
     # 26~29（4）    成像帧计数（无符号整型4位）
     val_tuple = struct.unpack('>I', stream.read(4))
     headDic["picframeCount"] = val_tuple[0]
+    headList.append(val_tuple[0])
     # 30~33(4)      帧内计数
     val_tuple = struct.unpack('>I', stream.read(4))
     headDic["frameCount"] = val_tuple[0]
+    headList.append(val_tuple[0])
+
+    headList.append(struct.unpack('>B', stream.read(1))[0])  # 图像像素位数
+    headList.append(struct.unpack('>B', stream.read(1))[0])  # 扫描成像的数据维度
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 空间维X方向上的像元数
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 空间维Y方向上的像元数
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 光谱维波长点数目
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 开窗1行起始位置
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 开窗1列起始位置
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 开窗1行数
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 开窗2行起始位置
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 开窗2列起始位置
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 开窗2行数
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 曝光时间
+    headList.append(struct.unpack('>B', stream.read(1))[0])  # 成像模式
+    headList.append(struct.unpack('>B', stream.read(1))[0])  # 增益
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 探测器中心位置波长
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 像元光谱分辨率
+    headList.append(struct.unpack('>H', stream.read(2))[0])  # 像元空间分辨率
+
+
+
     stream.close()
-    return headDic
+    return headDic,headList
 
 
 # 对图片帧文件进行处理
@@ -263,8 +322,8 @@ def processPicStream(data):
     util.fileWrite(data[indexList[M - 1]:], FileList[M - 1])
     # 文件流回到开头
     FileList[M - 1].seek(0)
-    headData = processHeader(headStream)
-    return headData, FileList
+    headData,headList = processHeader(headStream)
+    return headData,headList, FileList
 
 
 # 输入文件流 对文件流工作
