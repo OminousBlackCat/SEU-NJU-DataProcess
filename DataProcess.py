@@ -132,6 +132,10 @@ def conduct_output(queue: Manager().Queue):
                 currentHeader = fits.Header()
                 for key in head_list[index].keys():
                     currentHeader.set(key, head_list[index][key])
+                # 写入csv文件
+                with open(csv_file_name, 'wb') as write_csv:
+                    writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                    writer.writerow('')
                 # 输出文件
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
                 currentHDUList.writeto(GLOBAL_OUTPUT_DIR + datetime.datetime.now().strftime("%H-%M-%S-")

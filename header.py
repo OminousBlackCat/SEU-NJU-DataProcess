@@ -62,22 +62,18 @@ standard_header_list = read_header_from_txt('raw_header.txt', work_mode=1)
 all_header_list = read_header_from_txt('all_header.txt', work_mode=0)
 
 
-def get_real_header(real_list: list):
+def get_real_header(real_dict: dict):
     """
     获取真正头部所需函数, 输入从DataProcessTool中代码获得的dict_list
     将会把standard_header_list中拥有的key相应value进行替换, 返回真正的fits.header
-    :param real_list: 输入的包含有多余Key的List
+    :param real_dict: 输入的包含真正信息的dict
     :return: fits.header对象, 可以直接用来输入fits文件
     """
     real_header = fits.Header()
     for s_ele in standard_header_list:
         real_header.set(s_ele['key'], value=s_ele['value'], comment=s_ele['comment'])
-    for r_ele in real_list:
-        try:
-            temp = real_header[r_ele['key']]  # raise KeyError
-            real_header.set(r_ele['key'], value=r_ele['value'])
-        except KeyError:
-            continue
+    for key in real_dict:
+        real_header.set(key, real_dict[key])
     return real_header
 
 
