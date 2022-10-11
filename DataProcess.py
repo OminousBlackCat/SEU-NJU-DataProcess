@@ -146,8 +146,8 @@ def conduct_output(queue: Manager().Queue):
                     writer.writerow(head_list[index])
                 # 输出文件
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
-                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + fileWriteTime
-                                       + str(scanCount).zfill(4) + str(frameCount).zfill(8) + '.fits', overwrite=True)
+                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime + '-'
+                                       + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits', overwrite=True)
                 output_count.value += 1
         else:
             util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))

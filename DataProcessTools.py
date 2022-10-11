@@ -487,7 +487,6 @@ def parallel_work(fread, start_byte):
     # print("无数据头，解压结束")
     # print("发现图片帧：" + str(num))
     # 输出所有图片信息
-    util.log("return")
     return header_dic_data, header_list_data, pic_data
 
 
