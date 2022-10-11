@@ -4,6 +4,7 @@ import struct
 from io import BytesIO
 import struct
 import config
+import header
 
 '''
 此py文件对一个单独的dat文件进行解析
@@ -62,7 +63,7 @@ def findPicHead(data):
 
 # 解析辅助数据并构造header(字典)
 def processHeader(stream: BytesIO):
-    headDic = {}
+    headDic = header.all_header_list
     # stream代表输入的辅助数据流
     # 辅助数据格式    0~5(6)    时间码
     #               6~69(64)    定位数据
