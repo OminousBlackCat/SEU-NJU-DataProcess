@@ -72,11 +72,11 @@ except OSError as exception:
     sys.exit("程序终止")
 
 # 创建csv文件, 每个dat文件对应一个csv
-csv_file_name = datetime.datetime.now().strftime('RSM%Y%m%d%H%M%S.csv')  # TODO: 这里的时间需不需要改一下
-with open(csv_file_name, 'wb') as csv_file:
-    file_writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+csv_file_name = GLOBAL_CSV_DIR + datetime.datetime.now().strftime('RSM%Y%m%d%H%M%S.csv')  # TODO: 这里的时间需不需要改一下
+with open(csv_file_name, 'w', encoding='utf-8-sig') as csv_file:
+    file_writer = csv.writer(csv_file)
     file_writer.writerow(header.all_header_list)
-
+    util.log("创建CSV文件成功")
 
 # 读入文件, 创建共享内存(格式为mmap)
 # 已弃用: 使用mmap, mmap可以使文件立刻载入至内存, 略去之后的磁盘读取时间, mmap将作为每个子进程的全局数据, 对于linux, 其父进程fork()时将对此数据一并共享(会产生许多内存损耗)
@@ -90,13 +90,16 @@ output_count = Value('i', 0)
 # 函数输入: 队列, 文件的开始比特数位
 # 函数处理完之后会给队列提交结果, consumer进程将监视队列进行文件写出工作
 def process_file(start_byte: int, queue: Manager().Queue):
+    util.log("开启producer函数, start byte为:" + str(start_byte))
     out_dict = {
         'image_list': [],
-        'head_list': []
+        'head_list': [],
+        'dict_list': []
     }
     with open(GLOBAL_INPUT_FILE_URL, 'rb') as input_file:
         input_file.seek(start_byte)
-        out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(input_file, start_byte)
+        out_dict['dict_list'], out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(
+            input_file, start_byte)
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
     queue.put(out_dict)
@@ -114,6 +117,7 @@ def conduct_output(queue: Manager().Queue):
             # TODO: 如何处理?
             image_list = out_dic['image_list']
             head_list = out_dic['head_list']
+            dict_list = out_dic['dict_list']
             for index in range(len(image_list)):
                 # 每个元素代表了一个fits文件
                 current_image = []
@@ -129,17 +133,21 @@ def conduct_output(queue: Manager().Queue):
                     completeImage[:, child_index * childShape[1]: (child_index + 1) * childShape[1]] \
                         = current_image[child_index]
                 # 构造header
-                currentHeader = fits.Header()
-                for key in head_list[index].keys():
-                    currentHeader.set(key, head_list[index][key])
+                currentHeader = header.get_real_header(dict_list[index])
+                fileWriteTime = (datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(
+                    days=int(currentHeader['STR_TIME'] / (3600 * 24)), seconds=currentHeader['STR_TIME'] % (3600 * 24))
+                                 ).strftime("%Y-%m-%dT%H-%M-%S")
+                currentHeader.set('STR_TIME', fileWriteTime)
+                scanCount = currentHeader['SCN_NUM']
+                frameCount = currentHeader['FRM_NUM']
                 # 写入csv文件
-                with open(csv_file_name, 'wb') as write_csv:
-                    writer = csv.writer(csv_file, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                    writer.writerow('')
+                with open(csv_file_name, 'w', encoding='utf-8-sig') as write_csv:
+                    writer = csv.writer(write_csv)
+                    writer.writerow(head_list[index])
                 # 输出文件
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
-                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + datetime.datetime.now().strftime("%H-%M-%S-")
-                                       + str(output_count.value) + '.fits', overwrite=True)
+                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + fileWriteTime
+                                       + str(scanCount).zfill(4) + str(frameCount).zfill(8) + '.fits', overwrite=True)
                 output_count.value += 1
         else:
             util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))

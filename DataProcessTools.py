@@ -63,7 +63,7 @@ def findPicHead(data):
 
 # 解析辅助数据并构造header(字典)
 def processHeader(stream: BytesIO):
-    headDic = header.all_header_list
+    headDic = {}
     headList = []
     # stream代表输入的辅助数据流
     # 辅助数据格式    0~5(6)    时间码
@@ -79,11 +79,12 @@ def processHeader(stream: BytesIO):
     # 定位数据需要的内容为
     stream.read(2)  # 跳过有的没的
     stream.read(6)  # 跳过时间码
-    #stream.read(2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
-    signPosition = stream.read(1).hex() #定位标志
+    # stream.read(2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
+    signPosition = stream.read(1).hex()  # 定位标志
     starNum = stream.read(1).hex()  # 可用星数
-    timeS = struct.unpack('>I', stream.read(4)) # J2000时间整s
-    timeMs = struct.unpack('>I', stream.read(4)) # J2000时间整ms
+    timeS = struct.unpack('>I', stream.read(4))  # J2000时间整s
+    headDic['STR_TIME'] = timeS[0]
+    timeMs = struct.unpack('>I', stream.read(4))  # J2000时间整ms
     xWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系X位置(J2000坐标系, 同下)
     yWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Y位置
     zWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Z位置
@@ -93,7 +94,7 @@ def processHeader(stream: BytesIO):
     sign = stream.read(1).hex()  # 定轨标志
     workMode = stream.read(1).hex()  # 获得载荷舱工作模式
     headDic['workMode'] = workMode
-    J2000Time = struct.unpack('>I', stream.read(4)) # J2000时间
+    J2000Time = struct.unpack('>I', stream.read(4))  # J2000时间
     xPosition = struct.unpack('>f', stream.read(4))  # 星务计算X位置(J2000坐标系, 同下)
     yPosition = struct.unpack('>f', stream.read(4))  # 星务计算Y位置
     zPosition = struct.unpack('>f', stream.read(4))  # 星务计算Z位置
@@ -130,8 +131,8 @@ def processHeader(stream: BytesIO):
     # 总读头移动数: 6 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 * 6 = 69
 
     # 定轨数据(58)
-    #stream.read(58)
-    headList.append(stream.read(1).hex()) # 定轨标志2
+    # stream.read(58)
+    headList.append(stream.read(1).hex())  # 定轨标志2
     headList.append(stream.read(1).hex())  # 可用星数2
     headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根J2000时间整秒
     headList.append(struct.unpack('>I', stream.read(4))[0])  # 瞬根轨道半长轴(a)
@@ -147,9 +148,6 @@ def processHeader(stream: BytesIO):
     headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(Ω)
     headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(w)
     headList.append(struct.unpack('>I', stream.read(4))[0])  # 平根轨道半长轴(M)
-
-
-
 
     # 载荷舱姿态数据（56）
     # 0~7（8） 载荷舱惯性四元数Q0（8字节双精度）
@@ -174,7 +172,7 @@ def processHeader(stream: BytesIO):
     headList.append(struct.unpack('>d', stream.read(8))[0])  # 载荷舱角速率z
 
     # 平台舱姿态数据（28）
-    #stream.read(28)
+    # stream.read(28)
     headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱惯性四元数Q0
     headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱惯性四元数Q1
     headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱惯性四元数Q2
@@ -183,7 +181,6 @@ def processHeader(stream: BytesIO):
     headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱角速率Y
     headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱角速率Z
 
-
     # 温度数据（2）
     stream.read(2)
 
@@ -191,70 +188,56 @@ def processHeader(stream: BytesIO):
     # 0~12（13） 电机1参数
     # 0~3 电机1读出位置 无符号二进制整型
     val_tuple = struct.unpack('>I', stream.read(4))
-    headDic["motor1Position"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 4~5 电机1位置误差 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
-    headDic["motor1PositionError"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 6~7 电机1读出速度 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
-    headDic["motor1Speed"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 8~9 电机1读出电流 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
-    headDic["motor1ElectricCurrent"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 10 电机1状态 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
-    headDic["motor1State"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 11 电机1警报信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
-    headDic["motor1Warning"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 12 电机1传感器使用和超限信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
-    headDic["motor1Sensor"] = val_tuple[0]
     headList.append(val_tuple[0])
 
     # 13~25（13）   电机2参数
     # 13~16 电机2读出位置 无符号二进制整型
     val_tuple = struct.unpack('>I', stream.read(4))
-    headDic["motor2Position"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 17~18 电机2位置误差 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
-    headDic["motor2PositionError"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 19~20 电机2读出速度 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
-    headDic["motor2Speed"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 21~22 电机2读出电流 无符号二进制整型
     val_tuple = struct.unpack('>H', stream.read(2))
-    headDic["motor2ElectricCurrent"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 23 电机2状态 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
-    headDic["motor2State"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 24 电机2警报信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
-    headDic["motor2Warning"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 25 电机2传感器使用和超限信息 无符号二进制整型
     val_tuple = struct.unpack('>B', stream.read(1))
-    headDic["motor2Sensor"] = val_tuple[0]
     headList.append(val_tuple[0])
 
     # 26~29（4）    成像帧计数（无符号整型4位）
     val_tuple = struct.unpack('>I', stream.read(4))
-    headDic["picframeCount"] = val_tuple[0]
+    headDic["SCN_NUM"] = val_tuple[0]
     headList.append(val_tuple[0])
     # 30~33(4)      帧内计数
     val_tuple = struct.unpack('>I', stream.read(4))
-    headDic["frameCount"] = val_tuple[0]
+    headDic["FRM_NUM"] = val_tuple[0]
     headList.append(val_tuple[0])
 
     headList.append(struct.unpack('>B', stream.read(1))[0])  # 图像像素位数
@@ -272,13 +255,15 @@ def processHeader(stream: BytesIO):
     headList.append(struct.unpack('>B', stream.read(1))[0])  # 成像模式
     headList.append(struct.unpack('>B', stream.read(1))[0])  # 增益
     headList.append(struct.unpack('>H', stream.read(2))[0])  # 探测器中心位置波长
-    headList.append(struct.unpack('>H', stream.read(2))[0])  # 像元光谱分辨率
-    headList.append(struct.unpack('>H', stream.read(2))[0])  # 像元空间分辨率
-
-
+    lin_disp = struct.unpack('>H', stream.read(2))[0]
+    headList.append(lin_disp)  # 像元光谱分辨率
+    headDic["LIN_DISP"] = lin_disp
+    spec_res = struct.unpack('>H', stream.read(2))[0]
+    headList.append(spec_res)  # 像元空间分辨率
+    headDic["SPEC_RES"] = spec_res
 
     stream.close()
-    return headDic,headList
+    return headDic, headList
 
 
 # 对图片帧文件进行处理
@@ -322,8 +307,8 @@ def processPicStream(data):
     util.fileWrite(data[indexList[M - 1]:], FileList[M - 1])
     # 文件流回到开头
     FileList[M - 1].seek(0)
-    headData,headList = processHeader(headStream)
-    return headData,headList, FileList
+    headDic, headList = processHeader(headStream)
+    return headDic, headList, FileList
 
 
 # 输入文件流 对文件流工作
@@ -338,7 +323,8 @@ def dataWork(fread):
     # 记录数据
     Data = []
     # 存储所有图片信息
-    header_data = []
+    header_dic_data = []
+    header_list_data = []
     pic_data = []
 
     # 寻找数据帧的开头
@@ -358,7 +344,9 @@ def dataWork(fread):
         # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
         index = findPicHead(Data)
         # 最终输出的头部信息 应该是个字典
-        headerData = None
+        headerDic = None
+        # 输出的csv row
+        headerList = None
         # 需要拼接图像list
         picList = None
 
@@ -371,9 +359,10 @@ def dataWork(fread):
             # 无用内容不处理
             if num > 0:
                 # 处理图像帧内容
-                headerData, picList = processPicStream(PicData)
+                headerDic, headerList, picList = processPicStream(PicData)
                 # 存储图片头部信息
-                header_data.append(deepcopy(headerData))
+                header_dic_data.append(deepcopy(headerDic))
+                header_list_data.append(deepcopy(headerList))
                 # 储存图片信息
                 pic_data.append(deepcopy(picList))
             # 情况图像帧
@@ -390,9 +379,10 @@ def dataWork(fread):
     if num > 0 and len(PicData) > 1000:
         try:
             # 处理图像帧内容
-            headerData, picList = processPicStream(PicData)
+            headerDic, headerList, picList = processPicStream(PicData)
             # 存储图片头部信息
-            header_data.append(deepcopy(headerData))
+            header_dic_data.append(deepcopy(headerDic))
+            header_list_data.append(deepcopy(headerList))
             # 储存图片信息
             pic_data.append(deepcopy(picList))
         except BaseException as exception:
@@ -402,7 +392,7 @@ def dataWork(fread):
     util.log("无数据头，解压结束")
     util.log("发现图片帧：" + str(num))
     # 输出所有图片信息
-    return header_data, pic_data
+    return header_dic_data, header_list_data, pic_data
 
 
 # 用于并行工作
@@ -419,7 +409,8 @@ def parallel_work(fread, start_byte):
     # 记录数据
     Data = []
     # 存储所有图片信息
-    header_data = []
+    header_dic_data = []
+    header_list_data = []
     pic_data = []
     # 寻找数据帧的开头
     while findFrameHead(fread, head_data) == 1:
@@ -439,7 +430,9 @@ def parallel_work(fread, start_byte):
         # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
         index = findPicHead(Data)
         # 最终输出的头部信息 应该是个字典
-        headerData = None
+        headerDic = None
+        # 输出的csv row
+        headerList = None
         # 需要拼接图像list
         picList = None
 
@@ -452,10 +445,12 @@ def parallel_work(fread, start_byte):
             # 无用内容不处理
             if num > 0:
                 # 处理图像帧内容
-                headerData, picList = processPicStream(PicData)
+                headerDic, headerList, picList = processPicStream(PicData)
                 if len(picList) == 6:
+                    # 处理图像帧内容
                     # 存储图片头部信息
-                    header_data.append(deepcopy(headerData))
+                    header_dic_data.append(deepcopy(headerDic))
+                    header_list_data.append(deepcopy(headerList))
                     # 储存图片信息
                     pic_data.append(deepcopy(picList))
                 # 判断终止条件
@@ -478,10 +473,11 @@ def parallel_work(fread, start_byte):
     if num > 0 and len(PicData) > 10000:
         try:
             # 处理图像帧内容
-            headerData, picList = processPicStream(PicData)
+            headerDic, headerList, picList = processPicStream(PicData)
             if len(picList) == 6:
                 # 存储图片头部信息
-                header_data.append(deepcopy(headerData))
+                header_dic_data.append(deepcopy(headerDic))
+                header_list_data.append(deepcopy(headerList))
                 # 储存图片信息
                 pic_data.append(deepcopy(picList))
         except BaseException as exception:
@@ -491,7 +487,8 @@ def parallel_work(fread, start_byte):
     # print("无数据头，解压结束")
     # print("发现图片帧：" + str(num))
     # 输出所有图片信息
-    return header_data, pic_data
+    util.log("return")
+    return header_dic_data, header_list_data, pic_data
 
 
 if __name__ == '__main__':

@@ -45,13 +45,10 @@ def read_header_from_txt(txtPath: str, work_mode=1):
             tempDic['comment'] = l_split_second[1].strip()
             tempList.append(tempDic)
     if work_mode == 0:
-        with open(txtPath) as f:
+        with open(txtPath, encoding='utf-8') as f:
             lines = f.readlines()
         for line in lines:
-            tempList.append({
-                'key': line,
-                'value': None
-            })
+            tempList.append(line.rstrip('\n'))
     return tempList
 
 
@@ -74,9 +71,9 @@ def get_real_header(real_dict: dict):
     for s_ele in standard_header_list:
         real_header.set(s_ele['key'], value=s_ele['value'], comment=s_ele['comment'])
     for key in real_dict:
-        if key == 'STR_TIME':
-            real_header.set(key, (datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(seconds=real_dict[key])).strftime("%Y-%m-%dT%H-%M-%S"))
         real_header.set(key, real_dict[key])
     return real_header
 
 
+if __name__ == '__main__':
+    print(all_header_list)
