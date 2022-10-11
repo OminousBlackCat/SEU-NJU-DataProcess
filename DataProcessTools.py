@@ -64,6 +64,7 @@ def findPicHead(data):
 # 解析辅助数据并构造header(字典)
 def processHeader(stream: BytesIO):
     headDic = header.all_header_list
+    headList = []
     # stream代表输入的辅助数据流
     # 辅助数据格式    0~5(6)    时间码
     #               6~69(64)    定位数据
@@ -76,11 +77,23 @@ def processHeader(stream: BytesIO):
 
     # 处理定位数据
     # 定位数据需要的内容为
+    stream.read(2)  # 跳过有的没的
     stream.read(6)  # 跳过时间码
-    stream.read(2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
+    #stream.read(2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
+    signPosition = stream.read(1).hex() #定位标志
+    starNum = stream.read(1).hex()  # 可用星数
+    timeS = struct.unpack('>I', stream.read(4)) # J2000时间整s
+    timeMs = struct.unpack('>I', stream.read(4)) # J2000时间整ms
+    xWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系X位置(J2000坐标系, 同下)
+    yWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Y位置
+    zWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Z位置
+    xWVelocity = struct.unpack('>f', stream.read(4))  # WGS-84坐标系X速度
+    yWVelocity = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Y速度
+    zWVelocity = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Z速度
+    sign = stream.read(1).hex()  # 定轨标志
     workMode = stream.read(1).hex()  # 获得载荷舱工作模式
     headDic['workMode'] = workMode
-    stream.read(4)  # 跳过J2000时间
+    J2000Time = struct.unpack('>I', stream.read(4)) # J2000时间
     xPosition = struct.unpack('>f', stream.read(4))  # 星务计算X位置(J2000坐标系, 同下)
     yPosition = struct.unpack('>f', stream.read(4))  # 星务计算Y位置
     zPosition = struct.unpack('>f', stream.read(4))  # 星务计算Z位置
@@ -93,10 +106,42 @@ def processHeader(stream: BytesIO):
     headDic['SAT_VEL1'] = xVelocity[0]
     headDic['SAT_VEL2'] = yVelocity[0]
     headDic['SAT_VEL3'] = zVelocity[0]
+
+    headList.append(signPosition)
+    headList.append(starNum)
+    headList.append(timeS[0])
+    headList.append(timeMs[0])
+    headList.append(xWPosition[0])
+    headList.append(yWPosition[0])
+    headList.append(zWPosition[0])
+    headList.append(xWVelocity[0])
+    headList.append(yWVelocity[0])
+    headList.append(zWVelocity[0])
+    headList.append(sign)
+    headList.append(workMode)
+    headList.append(J2000Time[0])
+    headList.append(xPosition[0])
+    headList.append(yPosition[0])
+    headList.append(zPosition[0])
+    headList.append(xVelocity[0])
+    headList.append(yVelocity[0])
+    headList.append(zVelocity[0])
+
     # 总读头移动数: 6 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 * 6 = 69
 
     # 定轨数据(58)
-    stream.read(58)
+    #stream.read(58)
+    sign2 = stream.read(1).hex()  # 定轨标志2
+    starNum2 = stream.read(1).hex()  # 可用星数2
+    StimeS = struct.unpack('>I', stream.read(4))  # 瞬根J2000时间整秒
+    orbitA = struct.unpack('>I', stream.read(4)) # 瞬根轨道半长轴(a)
+    orbitE = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(e)
+    orbitI = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(i)
+    orbitO = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(Ω)
+    orbitW = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(w)
+    orbitM = struct.unpack('>I', stream.read(4))  # 瞬根轨道半长轴(M)
+
+
 
     # 载荷舱姿态数据（56）
     # 0~7（8） 载荷舱惯性四元数Q0（8字节双精度）
