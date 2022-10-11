@@ -73,7 +73,7 @@ except OSError as exception:
 
 # 创建csv文件, 每个dat文件对应一个csv
 csv_file_name = GLOBAL_CSV_DIR + datetime.datetime.now().strftime('RSM%Y%m%d%H%M%S.csv')  # TODO: 这里的时间需不需要改一下
-with open(csv_file_name, 'w', encoding='utf-8-sig') as csv_file:
+with open(csv_file_name, 'a', encoding='utf-8-sig') as csv_file:
     file_writer = csv.writer(csv_file)
     file_writer.writerow(header.all_header_list)
     util.log("创建CSV文件成功")
@@ -141,7 +141,7 @@ def conduct_output(queue: Manager().Queue):
                 scanCount = currentHeader['SCN_NUM']
                 frameCount = currentHeader['FRM_NUM']
                 # 写入csv文件
-                with open(csv_file_name, 'w', encoding='utf-8-sig') as write_csv:
+                with open(csv_file_name, 'a', encoding='utf-8-sig') as write_csv:
                     writer = csv.writer(write_csv)
                     writer.writerow(head_list[index])
                 # 输出文件
@@ -170,6 +170,8 @@ def main():
         worker_pool.apply_async(process_file, (index, queue))
     worker_pool.close()
     worker_pool.join()
+    queue.task_done()
+    util.log("生产者已全部生产完毕!")
     queue.join()
     util.log("当前队列已经为空!")
     terminal_signal.value = 1
