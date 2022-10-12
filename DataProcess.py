@@ -14,7 +14,7 @@ IV.
 
 from openjpeg import decode
 from astropy.io import fits
-from multiprocessing import Manager, Pool, Process, Value, freeze_support
+from multiprocessing import Manager, Pool, Process, Value
 import numpy as np
 import DataProcessTools
 import config
