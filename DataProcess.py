@@ -118,7 +118,7 @@ def conduct_output(queue: Manager().Queue):
             out_dic = queue.get(block=False)
             util.log("开始处理文件..." + "当前队列内文件: " + str(queue.qsize()))
             # 开始处理dict
-            # TODO: 如何处理?
+            # TODO: 增加块的信息 输出每块的处理情况
             image_list = out_dic['image_list']
             head_list = out_dic['head_list']
             dict_list = out_dic['dict_list']
@@ -149,11 +149,16 @@ def conduct_output(queue: Manager().Queue):
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
                 currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime + '-'
                                        + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits', overwrite=True)
+            queue.task_done()
         except pyQueue.Empty:
             util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
             time.sleep(2)
             if terminal_signal.value != 0:
                 return
+        except RuntimeError:
+            util.log("解析文件出错, 帧内容有误, 已剔除")
+            queue.task_done()
+            continue
 
 
 # 程序入口函数
@@ -169,7 +174,6 @@ def main():
         worker_pool.apply_async(process_file, (index, queue))
     worker_pool.close()
     worker_pool.join()
-    queue.task_done()
     util.log("生产者已全部生产完毕!")
     queue.join()
     util.log("当前队列已经为空, 且生产者已经全部生产完毕. 已将结束标志设为可停止")
