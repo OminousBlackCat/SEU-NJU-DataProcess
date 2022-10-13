@@ -83,7 +83,7 @@ def processHeader(stream: BytesIO):
     # stream.read(2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
     signPosition = stream.read(1).hex()  # 定位标志
     starNum = stream.read(1).hex()  # 可用星数
-    timeS = struct.unpack('>I', stream.read(4))  # J2000时间整s
+    timeS = struct.unpack('>I', stream.read(4))[0]  # J2000时间整s
     fileWriteTime = (datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(
         days=int(timeS / (3600 * 24)), seconds=timeS % (3600 * 24))
                      ).strftime("%Y-%m-%dT%H-%M-%S")

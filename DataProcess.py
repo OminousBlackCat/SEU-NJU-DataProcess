@@ -15,6 +15,7 @@ IV.
 from openjpeg import decode
 from astropy.io import fits
 from multiprocessing import Manager, Pool, Process, Value
+import queue as pyQueue
 import numpy as np
 import DataProcessTools
 import config
@@ -114,7 +115,7 @@ def process_file(start_byte: int, queue: Manager().Queue):
 def conduct_output(queue: Manager().Queue):
     while True:
         try:
-            out_dic = queue.get(block=True)
+            out_dic = queue.get(block=False)
             util.log("开始处理文件..." + "当前队列内文件: " + str(queue.qsize()))
             # 开始处理dict
             # TODO: 如何处理?
@@ -148,7 +149,7 @@ def conduct_output(queue: Manager().Queue):
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
                 currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime + '-'
                                        + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits', overwrite=True)
-        except queue.Empty:
+        except pyQueue.Empty:
             util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
             time.sleep(2)
             if terminal_signal.value != 0:
