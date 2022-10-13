@@ -37,6 +37,10 @@ GLOBAL_WRITER_COUNT = config.writer_process_count
 GLOBAL_CSV_DIR = config.output_csv_dir
 
 # 预读文件, 预读文件大小
+with open(GLOBAL_INPUT_FILE_URL, 'rb') as tempFile:
+    tempFile.seek(0)  # seek一次查看是否有读取权限, 如果没有则会产生OSError
+    tempFile.close()  # 成功则直接关闭 继续
+    util.log("预读文件成功")
 try:
     if not os.path.exists(GLOBAL_INPUT_FILE_URL):
         raise OSError
@@ -45,7 +49,7 @@ try:
         tempFile.close()  # 成功则直接关闭 继续
         util.log("预读文件成功")
 except BaseException as exception:
-    util.log(str(exception))
+    util.log(exception)
     util.log("文件读取失败, 请检查文件路径是否输入正确以及是否拥有读取权限")
     sys.exit("程序终止")
 GLOBAL_FILE_SIZE = os.path.getsize(GLOBAL_INPUT_FILE_URL)  # 获得文件大小(Bytes)
@@ -83,7 +87,6 @@ with open(csv_file_name, 'a', encoding='utf-8-sig') as csv_file:
 # 直接使用python的文件流 在多个进程进行共享读取, 速度并不会很慢
 # 如何控制写入队列是影响速度的关键
 terminal_signal = Value('i', 0)
-output_count = Value('i', 0)
 
 
 # 并行(创造者/工人)函数(worker/producer函数), process pool中的每个进程都将执行此函数
@@ -110,8 +113,8 @@ def process_file(start_byte: int, queue: Manager().Queue):
 # 函数输入: 队列
 def conduct_output(queue: Manager().Queue):
     while True:
-        if not queue.empty():
-            out_dic = queue.get(block=False)
+        try:
+            out_dic = queue.get(block=True)
             util.log("开始处理文件..." + "当前队列内文件: " + str(queue.qsize()))
             # 开始处理dict
             # TODO: 如何处理?
@@ -134,10 +137,7 @@ def conduct_output(queue: Manager().Queue):
                         = current_image[child_index]
                 # 构造header
                 currentHeader = header.get_real_header(dict_list[index])
-                fileWriteTime = (datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(
-                    days=int(currentHeader['STR_TIME'] / (3600 * 24)), seconds=currentHeader['STR_TIME'] % (3600 * 24))
-                                 ).strftime("%Y-%m-%dT%H-%M-%S")
-                currentHeader.set('STR_TIME', fileWriteTime)
+                fileWriteTime = currentHeader['STR_TIME']
                 scanCount = currentHeader['SCN_NUM']
                 frameCount = currentHeader['FRM_NUM']
                 # 写入csv文件
@@ -148,13 +148,11 @@ def conduct_output(queue: Manager().Queue):
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
                 currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime + '-'
                                        + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits', overwrite=True)
-                output_count.value += 1
-        else:
+        except queue.Empty:
             util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
-            time.sleep(1)
-            if terminal_signal.value == 1:
+            time.sleep(2)
+            if terminal_signal.value != 0:
                 return
-            pass
 
 
 # 程序入口函数
@@ -173,7 +171,7 @@ def main():
     queue.task_done()
     util.log("生产者已全部生产完毕!")
     queue.join()
-    util.log("当前队列已经为空!")
+    util.log("当前队列已经为空, 且生产者已经全部生产完毕. 已将结束标志设为可停止")
     terminal_signal.value = 1
 
 
