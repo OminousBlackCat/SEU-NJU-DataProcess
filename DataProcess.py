@@ -147,7 +147,7 @@ def conduct_output(queue: Manager().Queue):
                     writer.writerow(head_list[index])
                 # 输出文件
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
-                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime + '-'
+                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime.replace('-', '') + '-'
                                        + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits', overwrite=True)
             queue.task_done()
         except pyQueue.Empty:

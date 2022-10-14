@@ -84,10 +84,9 @@ def processHeader(stream: BytesIO):
     signPosition = stream.read(1).hex()  # 定位标志
     starNum = stream.read(1).hex()  # 可用星数
     timeS = struct.unpack('>I', stream.read(4))[0]  # J2000时间整s
-    fileWriteTime = (datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(
+    fileWriteTime = datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(
         days=int(timeS / (3600 * 24)), seconds=timeS % (3600 * 24))
-                     ).strftime("%Y-%m-%dT%H-%M-%S")
-    headDic['STR_TIME'] = fileWriteTime
+    headDic['STR_TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H-%M-%S")
     timeMs = struct.unpack('>I', stream.read(4))  # J2000时间整ms
     xWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系X位置(J2000坐标系, 同下)
     yWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Y位置
