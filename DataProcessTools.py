@@ -186,7 +186,8 @@ def processHeader(stream: BytesIO):
     headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱角速率Z
 
     # 温度数据（2）
-    stream.read(2)
+    headList.append(struct.unpack('>I', stream.read(1))[0])  # 全日面面阵成像单元焦平面组件温度
+    headList.append(struct.unpack('>I', stream.read(1))[0])  # 光谱成像单元焦平面组件温度
 
     # 望远镜工作参数（64）
     # 0~12（13） 电机1参数
