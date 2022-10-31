@@ -6,6 +6,7 @@ TODO: 确认以下参数是否正确
 @author: seu_wxy
 """
 
+
 # 程序将单独文件分段的段数, 以及后续处理多核并行的并行数
 # 推荐使用当前可用cpu核数-4的并行数, 可以使得程序运行效率最大化
 # type: int
@@ -25,6 +26,12 @@ input_file_url = "jp2/SCSY1_KSC_HIS_20220808_004514.dat"
 # type: str
 # TODO: 程序输出参数
 output_dir = "jp2/"
+
+# 程序临时解压目标文件夹URL
+# 在程序运行结束后会将临时目录内的文件清空(删除)
+# 请确保此路径有完全写入权限
+# type:str
+temp_extract_dir = "temp/"
 
 # 程序输出csv文件的目录(由于数据目录文件量过大, 选择输出在不同文件夹), 文件命名按照日期
 # 完整示例: /data/chase/Chase/Lev1/2022/csv/

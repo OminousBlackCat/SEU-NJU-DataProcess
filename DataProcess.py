@@ -4,10 +4,10 @@
 分块图像以file stream(object) list的形式传入
 并对上述获得的图像进行拼接获得一张完整的fits文件, 最后将必须的头部信息写入fits完成帧数据处理
 主程序代码逻辑:
-I.      载入参数, 预读文件(是否存在), (创建)输出文件夹;
+I.      载入参数, 预读文件(是否存在), (创建)输出文件夹, 确定文件类型(是tar.gz还是dat文件)
 II.     定义分段, 开始并行处理文件, 每个进程(线程)处理一个文件夹之后都会提交一个写入任务进任务队列;
 III.    使用生产者-消费者模型(producer-consumer model), 使用一个单独的cpu处理写入队列;
-IV.
+IV.     当所有生产者都生产完毕后会调用map的join函数, 主程序继续运行, 此时会让消费者的停止标记为1, 程序便可在消费者全部消费完成后停止
 
 @author seu_wxy
 """
@@ -17,6 +17,7 @@ from astropy.io import fits
 from multiprocessing import Manager, Pool, Process, Value
 import queue as pyQueue
 import numpy as np
+import tarfile
 import DataProcessTools
 import config
 import os
@@ -29,6 +30,7 @@ import header
 
 # 载入参数
 GLOBAL_MULTIPROCESS_COUNT = config.multiprocess_count
+GLOBAL_TEMP_DIR = config.temp_extract_dir
 GLOBAL_INPUT_FILE_URL = config.input_file_url
 GLOBAL_OUTPUT_DIR = config.output_dir
 GLOBAL_FILE_SIZE = None  # 文件大小, 单位(Byte)
@@ -36,23 +38,52 @@ GLOBAL_MULTIPROCESS_LIST = []  # 迭代数组, 存储了每次执行并行函数
 GLOBAL_CHUNK_SIZE = config.iteration_chunk_size
 GLOBAL_WRITER_COUNT = config.writer_process_count
 GLOBAL_CSV_DIR = config.output_csv_dir
+GLOBAL_IS_COMP = True  # 是否是tar.gz的压缩格式, 默认为True
 
 # 预读文件, 预读文件大小
-with open(GLOBAL_INPUT_FILE_URL, 'rb') as tempFile:
-    tempFile.seek(0)  # seek一次查看是否有读取权限, 如果没有则会产生OSError
-    tempFile.close()  # 成功则直接关闭 继续
+with open(GLOBAL_INPUT_FILE_URL, 'rb') as originFile:
+    if GLOBAL_INPUT_FILE_URL.split('.')[-1] == 'dat':
+        GLOBAL_IS_COMP = False
+    if GLOBAL_INPUT_FILE_URL.split('.')[-1] == 'gz':
+        GLOBAL_IS_COMP = True
+    originFile.seek(0)  # seek一次查看是否有读取权限, 如果没有则会产生OSError
+    originFile.close()  # 成功则直接关闭 继续
     util.log("预读文件成功")
 try:
     if not os.path.exists(GLOBAL_INPUT_FILE_URL):
         raise OSError
-    with open(GLOBAL_INPUT_FILE_URL, 'rb') as tempFile:
-        tempFile.seek(0)  # seek一次查看是否有读取权限, 如果没有则会产生OSError
-        tempFile.close()  # 成功则直接关闭 继续
+    with open(GLOBAL_INPUT_FILE_URL, 'rb') as originFile:
+        originFile.seek(0)  # seek一次查看是否有读取权限, 如果没有则会产生OSError
+        originFile.close()  # 成功则直接关闭 继续
         util.log("预读文件成功")
 except BaseException as exception:
     util.log(exception)
     util.log("文件读取失败, 请检查文件路径是否输入正确以及是否拥有读取权限")
     sys.exit("程序终止")
+
+# 预读临时解压文件路径, 检查权限
+try:
+    if not os.path.exists(GLOBAL_TEMP_DIR):
+        os.makedirs(GLOBAL_TEMP_DIR)
+    if not os.access(GLOBAL_TEMP_DIR, os.W_OK):
+        raise OSError
+except OSError as exception:
+    util.log(str(exception))
+    util.log("创建临时文件夹失败或临时文件夹无写入权限")
+    sys.exit("程序终止")
+
+# 根据文件类型来获得文件类对象
+if GLOBAL_IS_COMP:
+    util.log("当前文件为tar.gz文件, 解压文件至临时文件夹中...")
+    tar = tarfile.open(GLOBAL_INPUT_FILE_URL)
+    for member in tar.getmembers():
+        if member.name.split('.')[-1] == 'dat':
+            tar.extract(member, path=GLOBAL_TEMP_DIR)
+            GLOBAL_INPUT_FILE_URL = GLOBAL_TEMP_DIR + member.name
+            util.log("解压成功, 文件URL为:" + GLOBAL_INPUT_FILE_URL)
+else:
+    util.log("当前文件为dat文件, 文件URL为:" + GLOBAL_INPUT_FILE_URL)
+
 GLOBAL_FILE_SIZE = os.path.getsize(GLOBAL_INPUT_FILE_URL)  # 获得文件大小(Bytes)
 
 # 创造Iteration数组
@@ -148,7 +179,8 @@ def conduct_output(queue: Manager().Queue):
                 # 输出文件
                 currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
                 currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime.replace('-', '') + '-'
-                                       + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits', overwrite=True)
+                                       + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits',
+                                       overwrite=True)
             queue.task_done()
         except pyQueue.Empty:
             util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
@@ -173,11 +205,14 @@ def main():
     for index in GLOBAL_MULTIPROCESS_LIST:
         worker_pool.apply_async(process_file, (index, queue))
     worker_pool.close()
-    worker_pool.join()
+    worker_pool.join()  # 当worker子程序全部quit之后, join()函数停止阻塞
     util.log("生产者已全部生产完毕!")
-    queue.join()
+    queue.join()  # 当queue为空, join()停止阻塞
     util.log("当前队列已经为空, 且生产者已经全部生产完毕. 已将结束标志设为可停止")
-    terminal_signal.value = 1
+    terminal_signal.value = 1  # 将停止标记记为1 代表消费者循环可以终止
+    if GLOBAL_IS_COMP:
+        util.log("删除解压临时文件...")
+        os.remove(GLOBAL_INPUT_FILE_URL)
 
 
 if __name__ == '__main__':
