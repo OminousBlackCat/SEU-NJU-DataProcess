@@ -22,6 +22,7 @@ import DataProcessTools
 import config
 import os
 import sys
+import traceback
 import datetime
 import time
 import util
@@ -133,8 +134,13 @@ def process_file(start_byte: int, queue: Manager().Queue):
     }
     with open(GLOBAL_INPUT_FILE_URL, 'rb') as input_file:
         input_file.seek(start_byte)
-        out_dict['dict_list'], out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(
-            input_file, start_byte)
+        try:
+            out_dict['dict_list'], out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(
+                input_file, start_byte)
+        except BaseException as e:
+            util.log(e)
+            util.log("此块解析失败, 已跳过")
+            traceback.print_exc()
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
     queue.put(out_dict)
@@ -162,16 +168,16 @@ def conduct_output(queue: Manager().Queue):
                     # 188为Y axis shape, 384为 X axis shape
                     current_image.append(decode(stream))
                 childShape = current_image[0].shape
-                completeImage = np.zeros((childShape[0], childShape[1] * 6))
+                completeImage = np.zeros((childShape[0], childShape[1] * 6), np.int16)
                 # 合并图像
                 for child_index in range(len(current_image)):
                     completeImage[:, child_index * childShape[1]: (child_index + 1) * childShape[1]] \
                         = current_image[child_index]
                 # 构造header
+                fileWriteTime = dict_list[index]['TIME']
+                scanCount = dict_list[index]['SCN_NUM']
+                frameCount = dict_list[index]['FRM_NUM']
                 currentHeader = header.get_real_header(dict_list[index])
-                fileWriteTime = currentHeader['STR_TIME']
-                scanCount = currentHeader['SCN_NUM']
-                frameCount = currentHeader['FRM_NUM']
                 # 写入csv文件
                 with open(csv_file_name, 'a', encoding='utf-8-sig') as write_csv:
                     writer = csv.writer(write_csv)

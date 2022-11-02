@@ -84,9 +84,10 @@ def processHeader(stream: BytesIO):
     signPosition = stream.read(1).hex()  # 定位标志
     starNum = stream.read(1).hex()  # 可用星数
     timeS = struct.unpack('>I', stream.read(4))[0]  # J2000时间整s
-    fileWriteTime = datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(
-        days=int(timeS / (3600 * 24)), seconds=timeS % (3600 * 24))
-    headDic['STR_TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H-%M-%S")
+    fileWriteTime = datetime.datetime(2000, 1, 1, 0, 0, 0, 0) + datetime.timedelta(
+        days=int(timeS / (3600 * 24)), seconds=timeS % (3600 * 24))  # 自2000年0点0秒起的累加秒
+    headDic['STR_TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H:%M:%S")
+    headDic['TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H-%M-%S")
     timeMs = struct.unpack('>I', stream.read(4))  # J2000时间整ms
     xWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系X位置(J2000坐标系, 同下)
     yWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Y位置
@@ -96,7 +97,7 @@ def processHeader(stream: BytesIO):
     zWVelocity = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Z速度
     sign = stream.read(1).hex()  # 定轨标志
     workMode = stream.read(1).hex()  # 获得载荷舱工作模式
-    headDic['workMode'] = workMode
+    # headDic['workMode'] = workMode
     J2000Time = struct.unpack('>I', stream.read(4))  # J2000时间
     xPosition = struct.unpack('>f', stream.read(4))  # 星务计算X位置(J2000坐标系, 同下)
     yPosition = struct.unpack('>f', stream.read(4))  # 星务计算Y位置
@@ -185,8 +186,8 @@ def processHeader(stream: BytesIO):
     headList.append(struct.unpack('>f', stream.read(4))[0])  # 载荷舱角速率Z
 
     # 温度数据（2）
-    headList.append(struct.unpack('>I', stream.read(1))[0])  # 全日面面阵成像单元焦平面组件温度
-    headList.append(struct.unpack('>I', stream.read(1))[0])  # 光谱成像单元焦平面组件温度
+    headList.append(struct.unpack('>b', stream.read(1))[0])  # 全日面面阵成像单元焦平面组件温度
+    headList.append(struct.unpack('>b', stream.read(1))[0])  # 光谱成像单元焦平面组件温度
 
     # 望远镜工作参数（64）
     # 0~12（13） 电机1参数
@@ -261,10 +262,10 @@ def processHeader(stream: BytesIO):
     headList.append(struct.unpack('>H', stream.read(2))[0])  # 探测器中心位置波长
     lin_disp = struct.unpack('>H', stream.read(2))[0]
     headList.append(lin_disp)  # 像元光谱分辨率
-    headDic["LIN_DISP"] = lin_disp
+    # headDic["LIN_DISP"] = lin_disp
     spec_res = struct.unpack('>H', stream.read(2))[0]
     headList.append(spec_res)  # 像元空间分辨率
-    headDic["SPEC_RES"] = spec_res
+    # headDic["SPEC_RES"] = spec_res
 
     stream.close()
     return headDic, headList

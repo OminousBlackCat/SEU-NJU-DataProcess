@@ -29,20 +29,32 @@ def read_header_from_txt(txtPath: str, work_mode=1):
             }
             l_split_first = line.split('=')
             if len(l_split_first) < 2:
-                continue
-            l_split_second = l_split_first[1].split('/')
-            tempDic['key'] = l_split_first[0].strip()
-            true_value = None
-            try:
-                true_value = int(l_split_second[0].strip())
-            except ValueError:
+                if len(l_split_first) == 1:  # 说明是comment
+                    tempDic['key'] = None
+                    tempDic['value'] = None
+                    tempDic['comment'] = l_split_first[0].strip().replace('COMMENT', '')
+                    tempList.append(tempDic)
+                    continue
+                else:
+                    continue
+            l_split_second = l_split_first[-1].split('/')
+            if l_split_second[-1].strip() == 'Instrument':
+                tempDic['key'] = 'INSTRUM'
+                tempDic['value'] = 'CHASE/HIS'
+                tempDic['comment'] = 'Instrument'
+            else:
+                tempDic['key'] = l_split_first[0].strip()
+                true_value = None
                 try:
-                    true_value = float(l_split_second[0].strip())
+                    true_value = int(l_split_second[0].strip())
                 except ValueError:
-                    true_value = l_split_second[0].replace("'", "")
-                    true_value = true_value.strip()
-            tempDic['value'] = true_value
-            tempDic['comment'] = l_split_second[1].strip()
+                    try:
+                        true_value = float(l_split_second[0].strip())
+                    except ValueError:
+                        true_value = l_split_second[0].replace("'", "")
+                        true_value = true_value.strip()
+                tempDic['value'] = true_value
+                tempDic['comment'] = l_split_second[-1].strip()
             tempList.append(tempDic)
     if work_mode == 0:
         with open(txtPath, encoding='utf-8') as f:
@@ -69,11 +81,15 @@ def get_real_header(real_dict: dict):
     """
     real_header = fits.Header()
     for s_ele in standard_header_list:
-        real_header.set(s_ele['key'], value=s_ele['value'], comment=s_ele['comment'])
+        if s_ele['key'] is None:
+            real_header.add_comment(s_ele['comment'])
+        else:
+            real_header.set(s_ele['key'], value=s_ele['value'], comment=s_ele['comment'])
     for key in real_dict:
-        real_header.set(key, real_dict[key])
+        if key in standard_header_list:
+            real_header.set(key, real_dict[key])
     return real_header
 
 
 if __name__ == '__main__':
-    print(all_header_list)
+    print(repr(standard_header_list))

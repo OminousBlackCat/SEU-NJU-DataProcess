@@ -4,6 +4,8 @@ NAXIS   =                    2 / number of data axes
 NAXIS1  =                 4608 / length of data axis 1
 NAXIS2  =                  376 / length of data axis 2
 EXTEND  =                    T / FITS dataset may contain extensions
+COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy
+COMMENT   and Astrophysics', volume 376, page 359; bibcode: 2001A&A...376..359H
 BZERO   =                32768 / offset data range to that of unsigned short
 BSCALE  =                    1 / default scaling factor
 STEPTIME=                 0.01 / One-step scanning duration,unit(s)
@@ -11,8 +13,8 @@ STR_TIME= '2021-12-22T06:01:06' / File date: YYYY-MM-DDTHH:MM:SS
 INSTRUM = 'CHASE/HIS'          / Instrument
 OBS_MOD = 'RSM     '           / Raster scanning mode
 LVL_NUM =                    0 / Data processing level
-HBIN    =                    1 / Binning mode in 1-dimension
-VBIN    =                    1 / Binning mode in 2-dimension
+HBIN    =                    2 / Binning mode in 1-dimension
+VBIN    =                    2 / Binning mode in 2-dimension
 EXP_TIME=                0.005 / Exposure time for raster scanning,unit(s)
 FRM_NUM =                37008 / Frame number of a scanning series
 STR_FRM =                    1 / Start frame of a scanning series
