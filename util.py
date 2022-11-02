@@ -74,3 +74,9 @@ def log(*args):
     print(datetime.datetime.now().strftime("[%Y-%m-%d-%H:%M:%S]:"), end="")
     print(*args)
 
+
+if __name__ == '__main__':
+    a = 1677
+    b = a << 32
+    print(b)
+

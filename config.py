@@ -18,7 +18,7 @@ multiprocess_count = 4
 # 需精确到后续的拓展名
 # type: str
 # TODO: 程序入口参数
-input_file_url = "jp2/SCSY1_KSC_HIS_20220808_004514.dat"
+input_file_url = "jp2/SCSY1_SYC_HIS_20221030_005780.dat"
 
 # 程序输出所在文件夹, 需精确至文件夹最后的绝对路径
 # 完整示例: /data/chase/Chase/Lev1/2022/3-4545/

@@ -32,7 +32,7 @@ def read_header_from_txt(txtPath: str, work_mode=1):
                 if len(l_split_first) == 1:  # 说明是comment
                     tempDic['key'] = None
                     tempDic['value'] = None
-                    tempDic['comment'] = l_split_first[0].strip().replace('COMMENT', '')
+                    tempDic['comment'] = l_split_first[0].strip().replace('COMMENT ', '')
                     tempList.append(tempDic)
                     continue
                 else:
@@ -86,8 +86,9 @@ def get_real_header(real_dict: dict):
         else:
             real_header.set(s_ele['key'], value=s_ele['value'], comment=s_ele['comment'])
     for key in real_dict:
-        if key in standard_header_list:
-            real_header.set(key, real_dict[key])
+        for this_dict in standard_header_list:
+            if key == this_dict['key']:
+                real_header.set(key, real_dict[key])
     return real_header
 
 

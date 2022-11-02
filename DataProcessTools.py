@@ -79,15 +79,20 @@ def processHeader(stream: BytesIO):
     # 处理定位数据
     # 定位数据需要的内容为
     stream.read(2)  # 跳过有的没的
-    stream.read(6)  # 跳过时间码
+    time_upper = int(struct.unpack('>H', stream.read(2))[0])
+    time_lower = int(struct.unpack('>I', stream.read(4))[0])
+    timeS = time_upper << 32
+    timeS = timeS + time_lower  # 单位: 0.1 ms
+    timeS = int(int(timeS) // int(10))  # 化为ms
+    timeShort = timeS // 1000  # 化为S
+    fileWriteTime = datetime.datetime(2000, 1, 1, 0, 0, 0, 0) + datetime.timedelta(
+        days=float(timeShort // (3600 * 24)), seconds=float(timeShort % (3600 * 24)))  # 自2000年0点0秒起的累加秒
+    headDic['STR_TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H:%M:%S")
+    headDic['TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H-%M-%S")
     # stream.read(2 + 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1)  # 跳过定位标志 可用星数 及其他数据 直到载荷舱工作模式
     signPosition = stream.read(1).hex()  # 定位标志
     starNum = stream.read(1).hex()  # 可用星数
-    timeS = struct.unpack('>I', stream.read(4))[0]  # J2000时间整s
-    fileWriteTime = datetime.datetime(2000, 1, 1, 0, 0, 0, 0) + datetime.timedelta(
-        days=int(timeS / (3600 * 24)), seconds=timeS % (3600 * 24))  # 自2000年0点0秒起的累加秒
-    headDic['STR_TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H:%M:%S")
-    headDic['TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H-%M-%S")
+    J2000 = struct.unpack('>I', stream.read(4))  # J2000时间整s
     timeMs = struct.unpack('>I', stream.read(4))  # J2000时间整ms
     xWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系X位置(J2000坐标系, 同下)
     yWPosition = struct.unpack('>f', stream.read(4))  # WGS-84坐标系Y位置
@@ -114,7 +119,7 @@ def processHeader(stream: BytesIO):
 
     headList.append(signPosition)
     headList.append(starNum)
-    headList.append(fileWriteTime)
+    headList.append(J2000[0])
     headList.append(timeMs[0])
     headList.append(xWPosition[0])
     headList.append(yWPosition[0])
@@ -496,13 +501,8 @@ def parallel_work(fread, start_byte):
 
 
 if __name__ == '__main__':
-    f = BytesIO()
-    util.fileWrite([10, 11, 12, 13, 14, 15], f)
-    f.seek(0)
-    a = f.read(1)
-    b = f.read(1)
-    c = f.read(1)
-    print(util.getData(f, 6))
+    with open("jp2/SCSY1_SYC_HIS_20221030_005780.dat", 'rb') as file:
+        parallel_work(file, 0)
     # filename = 'sun_42697.dat'
     # f = open(filename, 'rb')
     # s = 0
