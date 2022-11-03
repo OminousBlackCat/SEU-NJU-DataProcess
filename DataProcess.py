@@ -130,13 +130,15 @@ def process_file(start_byte: int, queue: Manager().Queue):
     out_dict = {
         'image_list': [],
         'head_list': [],
-        'dict_list': []
+        'dict_list': [],
+        'start_byte': 0
     }
     with open(GLOBAL_INPUT_FILE_URL, 'rb') as input_file:
         input_file.seek(start_byte)
         try:
             out_dict['dict_list'], out_dict['head_list'], out_dict['image_list'] = DataProcessTools.parallel_work(
                 input_file, start_byte)
+            out_dict['start_byte'] = start_byte
         except BaseException as e:
             util.log(e)
             util.log("此块解析失败, 已跳过")
@@ -153,7 +155,13 @@ def conduct_output(queue: Manager().Queue):
     while True:
         try:
             out_dic = queue.get(block=False)
-            util.log("开始处理文件..." + "当前队列内文件: " + str(queue.qsize()))
+        except pyQueue.Empty:
+            util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
+            time.sleep(2)
+            if terminal_signal.value != 0:
+                return
+        try:
+            util.log("开始处理文件...开始比特位为:[" + str(out_dic['start_byte']) + "]...当前队列内剩余文件: " + str(queue.qsize()))
             # 开始处理dict
             # TODO: 增加块的信息 输出每块的处理情况
             image_list = out_dic['image_list']
@@ -188,13 +196,8 @@ def conduct_output(queue: Manager().Queue):
                                        + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits',
                                        overwrite=True)
             queue.task_done()
-        except pyQueue.Empty:
-            util.log("队列为空...当前结束标识为: " + str(terminal_signal.value))
-            time.sleep(2)
-            if terminal_signal.value != 0:
-                return
         except RuntimeError:
-            util.log("解析文件出错, 帧内容有误, 已剔除")
+            util.log("解析文件出错, 此帧文件开始比特为:[" + str(out_dic['start_byte']) + "], 已剔除")
             queue.task_done()
             continue
 
