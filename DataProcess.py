@@ -153,6 +153,7 @@ def process_file(start_byte: int, queue: Manager().Queue):
 # 函数输入: 队列
 def conduct_output(queue: Manager().Queue):
     while True:
+        out_dic = None
         try:
             out_dic = queue.get(block=False)
         except pyQueue.Empty:
@@ -160,6 +161,7 @@ def conduct_output(queue: Manager().Queue):
             time.sleep(2)
             if terminal_signal.value != 0:
                 return
+            continue
         try:
             util.log("开始处理文件...开始比特位为:[" + str(out_dic['start_byte']) + "]...当前队列内剩余文件: " + str(queue.qsize()))
             # 开始处理dict
