@@ -188,6 +188,18 @@ def conduct_output(queue: Manager().Queue):
                 scanCount = dict_list[index]['SCN_NUM']
                 frameCount = dict_list[index]['FRM_NUM']
                 currentHeader = header.get_real_header(dict_list[index])
+                # 给header加入站台数据
+                # 文件名: SCSY1_SYC_HIS_20221030_005780.dat
+                circle_count = int(GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0].split('_')[-1])
+                station_name = GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0].split('_')[1]
+                station_ID = 0
+                if station_name == 'SYC':
+                    station_ID = 3
+                if station_name == 'MYC':
+                    station_ID = 2
+                if station_name == 'CSC':
+                    station_ID = 1
+                currentHeader.set('ORID', str(circle_count) + '-' + str(station_ID))
                 # 写入csv文件
                 with open(csv_file_name, 'a', encoding='utf-8-sig') as write_csv:
                     writer = csv.writer(write_csv)

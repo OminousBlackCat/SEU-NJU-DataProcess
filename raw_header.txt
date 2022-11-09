@@ -12,6 +12,7 @@ STEPTIME=                 0.01 / One-step scanning duration,unit(s)
 STR_TIME= '2021-12-22T06:01:06' / File date: YYYY-MM-DDTHH:MM:SS
 INSTRUM = 'CHASE/HIS'          / Instrument
 OBS_MOD = 'RSM     '           / Raster scanning mode
+ORID    = '5182-2'             / station ID
 LVL_NUM =                    0 / Data processing level
 HBIN    =                    2 / Binning mode in 1-dimension
 VBIN    =                    2 / Binning mode in 2-dimension
