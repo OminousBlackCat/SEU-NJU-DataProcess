@@ -85,7 +85,7 @@ def processHeader(stream: BytesIO):
     timeS = timeS + time_lower  # 单位: 0.1 ms
     timeS = int(int(timeS) // int(10))  # 化为ms
     timeShort = timeS // 1000  # 化为S
-    fileWriteTime = datetime.datetime(2000, 1, 1, 0, 0, 0, 0) + datetime.timedelta(
+    fileWriteTime = datetime.datetime(2000, 1, 1, 12, 0, 0, 0) + datetime.timedelta(
         days=float(timeShort // (3600 * 24)), seconds=float(timeShort % (3600 * 24)))  # 自2000年0点0秒起的累加秒
     headDic['STR_TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H:%M:%S")
     headDic['TIME'] = fileWriteTime.strftime("%Y-%m-%dT%H-%M-%S")

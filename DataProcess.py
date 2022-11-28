@@ -197,7 +197,7 @@ def conduct_output(queue: Manager().Queue):
                     station_ID = 3
                 if station_name == 'MYC':
                     station_ID = 2
-                if station_name == 'CSC':
+                if station_name == 'KSC':
                     station_ID = 1
                 currentHeader.set('ORID', str(circle_count) + '-' + str(station_ID))
                 # 写入csv文件
