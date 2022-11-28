@@ -109,7 +109,7 @@ except OSError as exception:
     sys.exit("程序终止")
 
 # 创建csv文件, 每个dat文件对应一个csv
-csv_file_name = GLOBAL_CSV_DIR + GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0] + 'csv'  # TODO: 这里的时间需不需要改一下
+csv_file_name = GLOBAL_CSV_DIR + GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0] + '.csv'  # TODO: 这里的时间需不需要改一下
 with open(csv_file_name, 'a', encoding='utf-8-sig') as csv_file:
     file_writer = csv.writer(csv_file)
     file_writer.writerow(header.all_header_list)
