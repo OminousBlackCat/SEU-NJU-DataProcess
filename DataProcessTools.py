@@ -424,62 +424,66 @@ def parallel_work(fread, start_byte):
     pic_data = []
     # 寻找数据帧的开头
     while findFrameHead(fread, head_data) == 1:
-        # 记录头部份
-        MainHead, not_error = util.getData(fread, 8)
-        if not not_error:
-            break
-        # 提取数据部分
-        Data1, not_error = util.getData(fread, 2032)
-        if not not_error:
-            break
-        Data = Data + deepcopy(Data1)
-        # 记录错误控制内容
-        ErrorControl, not_error = util.getData(fread, 4)
-        if not not_error:
-            break
-        # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
-        index = findPicHead(Data)
-        # 最终输出的头部信息 应该是个字典
-        headerDic = None
-        # 输出的csv row
-        headerList = None
-        # 需要拼接图像list
-        picList = None
+        try:
+            # 记录头部份
+            MainHead, not_error = util.getData(fread, 8)
+            if not not_error:
+                raise ValueError
+            # 提取数据部分
+            Data1, not_error = util.getData(fread, 2032)
+            if not not_error:
+                raise ValueError
+            Data = Data + deepcopy(Data1)
+            # 记录错误控制内容
+            ErrorControl, not_error = util.getData(fread, 4)
+            if not not_error:
+                raise ValueError
+            # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
+            index = findPicHead(Data)
+            # 最终输出的头部信息 应该是个字典
+            headerDic = None
+            # 输出的csv row
+            headerList = None
+            # 需要拼接图像list
+            picList = None
 
-        # 判断有无出现数据帧开头
-        if index < len(Data) - 7:
-            # 记录新图像帧之前的内容
-            PicData = PicData + Data[:index]
-            # 去除提取的内容
-            Data = Data[index + 8:]
-            # 无用内容不处理
-            if num > 0:
-                # 处理图像帧内容
-                headerDic, headerList, picList = processPicStream(PicData)
-                if len(picList) == 6:
+            # 判断有无出现数据帧开头
+            if index < len(Data) - 7:
+                # 记录新图像帧之前的内容
+                PicData = PicData + Data[:index]
+                # 去除提取的内容
+                Data = Data[index + 8:]
+                # 无用内容不处理
+                if num > 0:
                     # 处理图像帧内容
-                    # 存储图片头部信息
-                    header_dic_data.append(deepcopy(headerDic))
-                    header_list_data.append(deepcopy(headerList))
-                    # 储存图片信息
-                    pic_data.append(deepcopy(picList))
-                # 判断终止条件
-                if fread.tell() > end_byte:
-                    PicData = []
-                    break
-            # 情况图像帧
-            PicData = []
-            # 编号计数
-            num = num + 1
-            #
-        else:
-            # 提取图像帧内容
-            PicData = PicData + Data[:index]
-            # 保留可能出现数据头的内容
-            Data = Data[index:]
-            # 无用内容不处理
-        if 1.5 * (end_byte - start_byte) < fread.tell() - start_byte:
-            break
+                    headerDic, headerList, picList = processPicStream(PicData)
+                    if len(picList) == 6:
+                        # 处理图像帧内容
+                        # 存储图片头部信息
+                        header_dic_data.append(deepcopy(headerDic))
+                        header_list_data.append(deepcopy(headerList))
+                        # 储存图片信息
+                        pic_data.append(deepcopy(picList))
+                    # 判断终止条件
+                    if fread.tell() > end_byte:
+                        PicData = []
+                        break
+                # 情况图像帧
+                PicData = []
+                # 编号计数
+                num = num + 1
+                #
+            else:
+                # 提取图像帧内容
+                PicData = PicData + Data[:index]
+                # 保留可能出现数据头的内容
+                Data = Data[index:]
+                # 无用内容不处理
+            if 1.5 * (end_byte - start_byte) < fread.tell() - start_byte:
+                break
+        except ValueError as ve:
+            util.log(str(ve))
+            util.log("当前frame解析出错")
     if num > 0 and len(PicData) > 10000:
         try:
             # 处理图像帧内容

@@ -141,12 +141,12 @@ def process_file(start_byte: int, queue: Manager().Queue):
             out_dict['start_byte'] = start_byte
         except BaseException as e:
             util.log(e)
-            util.log("此块解析失败, 已跳过")
+            util.log("出现致命错误, 此块解析失败, 已跳过此chunk")
             traceback.print_exc()
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
     queue.put(out_dict)
-    util.log("此块解析成功!  当前队列剩余文件: " + str(queue.qsize()))
+    # util.log("此块解析成功!  当前队列剩余文件: " + str(queue.qsize()))
 
 
 # 处理(消费者)函数(consumer函数), 监视队列, 对队列里的元素进行处理
@@ -162,23 +162,28 @@ def conduct_output(queue: Manager().Queue):
             if terminal_signal.value != 0:
                 return
             continue
-        try:
-            util.log("开始处理文件...开始比特位为:[" + str(out_dic['start_byte']) + "]...当前队列内剩余文件: " + str(queue.qsize()))
-            # 开始处理dict
-            # TODO: 增加块的信息 输出每块的处理情况
-            image_list = out_dic['image_list']
-            head_list = out_dic['head_list']
-            dict_list = out_dic['dict_list']
-            for index in range(len(image_list)):
-                # 每个元素代表了一个fits文件
-                current_image = []
-                for stream in image_list[index]:
-                    # 将jp2文件流转为二维图像数组
-                    # jp2的shape应为(188, 384)
-                    # 188为Y axis shape, 384为 X axis shape
+
+        util.log("开始处理文件...开始比特位为:[" + str(out_dic['start_byte']) + "]...当前队列内剩余文件: " + str(queue.qsize()))
+        # 开始处理dict
+        # TODO: 增加块的信息 输出每块的处理情况
+        image_list = out_dic['image_list']
+        head_list = out_dic['head_list']
+        dict_list = out_dic['dict_list']
+        for index in range(len(image_list)):
+            # 每个元素代表了一个fits文件
+            current_image = []
+
+            for stream in image_list[index]:
+                # 将jp2文件流转为二维图像数组
+                # jp2的shape应为(188, 384)
+                # 188为Y axis shape, 384为 X axis shape
+                try:
                     current_image.append(decode(stream))
-                childShape = current_image[0].shape
-                completeImage = np.zeros((childShape[0], childShape[1] * 6), np.int16)
+                except BaseException:
+                    continue
+            childShape = current_image[0].shape
+            completeImage = np.zeros((childShape[0], childShape[1] * 6), np.int16)
+            try:
                 # 合并图像
                 for child_index in range(len(current_image)):
                     completeImage[:, child_index * childShape[1]: (child_index + 1) * childShape[1]] \
@@ -209,11 +214,10 @@ def conduct_output(queue: Manager().Queue):
                 currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime.replace('-', '') + '-'
                                        + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits',
                                        overwrite=True)
-            queue.task_done()
-        except RuntimeError:
-            util.log("解析文件出错, 此帧文件开始比特为:[" + str(out_dic['start_byte']) + "], 已剔除")
-            queue.task_done()
-            continue
+            except BaseException:
+                util.log("解析文件出错, 此帧文件开始比特为:[" + str(out_dic['start_byte']) + "], 已剔除")
+                continue
+        queue.task_done()
 
 
 # 程序入口函数
