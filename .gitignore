@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 jp2/
+data/
 .idea/
 
 # C extensions
