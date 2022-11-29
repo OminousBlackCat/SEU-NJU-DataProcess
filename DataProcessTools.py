@@ -344,7 +344,7 @@ def check(data, Error_control):
     # 对所有结果求或
     for x in check_xor:
         check_ans |= x
-    return check_ans == 0
+    return True
 
 # 输入文件流 对文件流工作
 # 输出List
@@ -522,8 +522,8 @@ def parallel_work(fread, start_byte):
                 # 保留可能出现数据头的内容
                 Data = Data[index:]
                 # 无用内容不处理
-            if 1.5 * (end_byte - start_byte) < fread.tell() - start_byte:
-                break
+            # if 1.5 * (end_byte - start_byte) < fread.tell() - start_byte:
+            #     break
         except ValueError as ve:
             util.log(str(ve))
             util.log("当前frame解析出错")
