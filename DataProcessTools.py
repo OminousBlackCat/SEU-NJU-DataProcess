@@ -508,7 +508,7 @@ def parallel_work(fread, start_byte):
                         # 储存图片信息
                         pic_data.append(deepcopy(picList))
                     # 判断终止条件
-                    if fread.tell() > end_byte:
+                    if now > end_byte :
                         PicData = []
                         break
                 # 情况图像帧
