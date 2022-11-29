@@ -462,9 +462,13 @@ def parallel_work(fread, start_byte):
     while findFrameHead(fread, head_data) == 1:
         try:
             # 记录头部份
+            now = fread.tell()
             MainHead, not_error = util.getData(fread, 8)
             if not not_error:
                 raise ValueError
+            if not check([MainHead[:6]], MainHead[6:]):
+                fread.seek(now)
+                continue
             # 提取数据部分
             Data1, not_error = util.getData(fread, 2032)
             if not not_error:
@@ -474,6 +478,9 @@ def parallel_work(fread, start_byte):
             ErrorControl, not_error = util.getData(fread, 4)
             if not not_error:
                 raise ValueError
+            if not check([head_check, MainHead, Data], ErrorControl):
+                fread.seek(now)
+                continue
             # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
             index = findPicHead(Data)
             # 最终输出的头部信息 应该是个字典
