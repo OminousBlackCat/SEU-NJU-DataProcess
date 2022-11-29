@@ -326,7 +326,7 @@ def processPicStream(data):
 # 输出bool
 # 检查通过则为True 不通过为False
 def check(data, Error_control):
-    check_xor = Error_control
+    check_xor = deepcopy(Error_control)
     # 获取异或检查长度
     control_num = len(Error_control)
 
