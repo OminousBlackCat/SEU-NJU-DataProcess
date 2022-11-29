@@ -18,6 +18,7 @@ import header
 # 太阳空间望远镜科学载荷数据同步头[14,11,9,0,1,4,6,15]
 # 图像帧同步头[5,5,10,10,5,5,10,10]
 head_data = [14, 11, 9, 0, 1, 4, 6, 15]
+head_check = [(14 << 4)+11, (9 << 4), (1 << 4)+4, (6 << 4)+15]
 head_pic = [5, 5, 10, 10, 5, 5, 10, 10, 1, 2, 3, 4, 5, 6, 7, 8]
 pic_header = [15, 15, 4, 15, 15, 15, 5, 1]
 
@@ -321,6 +322,33 @@ def processPicStream(data):
     return headDic, headList, FileList
 
 
+# 对读取的数据做异或检查
+# 输出bool
+# 检查通过则为True 不通过为False
+def check(data, Error_control):
+    check_xor = []
+    # 获取异或检查长度
+    control_num = len(Error_control)
+    # 抑或检查初始化
+    for x in Error_control:
+        Error_control.append(0)
+
+    # 标记数据对应校验位
+    id = 0
+    # 对数据做检验
+    for data_list in data:
+        # 对每部分数据做操作
+        for x in data_list:
+            Error_control[id] ^= x
+            # 标记为转移
+            id = (id + 1) % control_num
+    # 检查是否所有位数都为0
+    check_ans = 0
+    # 对所有结果求或
+    for x in check_xor:
+        check_ans |= x
+    return check_ans == 0
+
 # 输入文件流 对文件流工作
 # 输出List
 # 格式 每个元素为一个文件流和一个list
@@ -340,9 +368,14 @@ def dataWork(fread):
     # 寻找数据帧的开头
     while findFrameHead(fread, head_data) == 1:
         # 记录头部份
+        now = fread.tell()
         MainHead, not_error = util.getData(fread, 8)
         if not_error:
             break
+        if not check([MainHead[:6]],MainHead[6:]):
+            fread.seek(now)
+            continue
+
         # 提取数据部分
         Data, not_error = Data + util.getData(fread, 2032)
         if not_error:
@@ -351,6 +384,9 @@ def dataWork(fread):
         ErrorControl, not_error = util.getData(fread, 4)
         if not_error:
             break
+        if not check([head_check, MainHead,Data],ErrorControl):
+            fread.seek(now)
+            continue
         # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
         index = findPicHead(Data)
         # 最终输出的头部信息 应该是个字典
