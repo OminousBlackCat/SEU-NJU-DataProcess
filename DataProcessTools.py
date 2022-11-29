@@ -428,15 +428,18 @@ def parallel_work(fread, start_byte):
             # 记录头部份
             MainHead, not_error = util.getData(fread, 8)
             if not not_error:
+                util.log("头部解析错处")
                 raise ValueError
             # 提取数据部分
             Data1, not_error = util.getData(fread, 2032)
             if not not_error:
+                util.log("数据部分帧读取出错")
                 raise ValueError
             Data = Data + deepcopy(Data1)
             # 记录错误控制内容
             ErrorControl, not_error = util.getData(fread, 4)
             if not not_error:
+                util.log("差错校检出错")
                 raise ValueError
             # 在数据帧中寻找图像帧开头，如果有输出图像帧开头的index
             index = findPicHead(Data)
