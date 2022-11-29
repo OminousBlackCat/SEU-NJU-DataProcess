@@ -162,62 +162,65 @@ def conduct_output(queue: Manager().Queue):
             if terminal_signal.value != 0:
                 return
             continue
+        try:
+            util.log("开始处理文件...开始比特位为:[" + str(out_dic['start_byte']) + "]...当前队列内剩余文件: " + str(queue.qsize()))
+            # 开始处理dict
+            # TODO: 增加块的信息 输出每块的处理情况
+            image_list = out_dic['image_list']
+            head_list = out_dic['head_list']
+            dict_list = out_dic['dict_list']
+            for index in range(len(image_list)):
+                # 每个元素代表了一个fits文件
+                current_image = []
 
-        util.log("开始处理文件...开始比特位为:[" + str(out_dic['start_byte']) + "]...当前队列内剩余文件: " + str(queue.qsize()))
-        # 开始处理dict
-        # TODO: 增加块的信息 输出每块的处理情况
-        image_list = out_dic['image_list']
-        head_list = out_dic['head_list']
-        dict_list = out_dic['dict_list']
-        for index in range(len(image_list)):
-            # 每个元素代表了一个fits文件
-            current_image = []
-
-            for stream in image_list[index]:
-                # 将jp2文件流转为二维图像数组
-                # jp2的shape应为(188, 384)
-                # 188为Y axis shape, 384为 X axis shape
+                for stream in image_list[index]:
+                    # 将jp2文件流转为二维图像数组
+                    # jp2的shape应为(188, 384)
+                    # 188为Y axis shape, 384为 X axis shape
+                    try:
+                        current_image.append(decode(stream))
+                    except BaseException:
+                        current_image.append(np.zeros((188, 384)))
+                        util.log("jp2文件解码失败! 已补零")
+                childShape = current_image[0].shape
+                completeImage = np.zeros((childShape[0], childShape[1] * 6), np.int16)
                 try:
-                    current_image.append(decode(stream))
+                    # 合并图像
+                    for child_index in range(len(current_image)):
+                        completeImage[:, child_index * childShape[1]: (child_index + 1) * childShape[1]] \
+                            = current_image[child_index]
+                    # 构造header
+                    fileWriteTime = dict_list[index]['TIME']
+                    scanCount = dict_list[index]['SCN_NUM']
+                    frameCount = dict_list[index]['FRM_NUM']
+                    currentHeader = header.get_real_header(dict_list[index])
+                    # 给header加入站台数据
+                    # 文件名: SCSY1_SYC_HIS_20221030_005780.dat
+                    circle_count = int(GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0].split('_')[-1])
+                    station_name = GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0].split('_')[1]
+                    station_ID = 0
+                    if station_name == 'SYC':
+                        station_ID = 3
+                    if station_name == 'MYC':
+                        station_ID = 2
+                    if station_name == 'KSC':
+                        station_ID = 1
+                    currentHeader.set('ORID', str(circle_count) + '-' + str(station_ID))
+                    # 写入csv文件
+                    with open(csv_file_name, 'a', encoding='utf-8-sig') as write_csv:
+                        writer = csv.writer(write_csv)
+                        writer.writerow(head_list[index])
+                    # 输出文件
+                    currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
+                    currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime.replace('-', '') + '-'
+                                           + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits',
+                                           overwrite=True)
                 except BaseException:
-                    current_image.append(np.zeros((188, 384)))
-                    util.log("jp2文件解码失败! 已补零")
-            childShape = current_image[0].shape
-            completeImage = np.zeros((childShape[0], childShape[1] * 6), np.int16)
-            try:
-                # 合并图像
-                for child_index in range(len(current_image)):
-                    completeImage[:, child_index * childShape[1]: (child_index + 1) * childShape[1]] \
-                        = current_image[child_index]
-                # 构造header
-                fileWriteTime = dict_list[index]['TIME']
-                scanCount = dict_list[index]['SCN_NUM']
-                frameCount = dict_list[index]['FRM_NUM']
-                currentHeader = header.get_real_header(dict_list[index])
-                # 给header加入站台数据
-                # 文件名: SCSY1_SYC_HIS_20221030_005780.dat
-                circle_count = int(GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0].split('_')[-1])
-                station_name = GLOBAL_INPUT_FILE_URL.split('/')[-1].split('.')[0].split('_')[1]
-                station_ID = 0
-                if station_name == 'SYC':
-                    station_ID = 3
-                if station_name == 'MYC':
-                    station_ID = 2
-                if station_name == 'KSC':
-                    station_ID = 1
-                currentHeader.set('ORID', str(circle_count) + '-' + str(station_ID))
-                # 写入csv文件
-                with open(csv_file_name, 'a', encoding='utf-8-sig') as write_csv:
-                    writer = csv.writer(write_csv)
-                    writer.writerow(head_list[index])
-                # 输出文件
-                currentHDUList = fits.HDUList(fits.PrimaryHDU(completeImage, currentHeader))
-                currentHDUList.writeto(GLOBAL_OUTPUT_DIR + 'RSM' + fileWriteTime.replace('-', '') + '-'
-                                       + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits',
-                                       overwrite=True)
-            except BaseException:
-                util.log("解析文件出错, 此帧文件开始比特为:[" + str(out_dic['start_byte']) + "], 此文件已剔除")
-                continue
+                    util.log("解析文件出错, 此帧文件开始比特为:[" + str(out_dic['start_byte']) + "], 此文件已剔除")
+                    continue
+        except BaseException:
+            util.log("chunk处理失败, 发生致命错误!")
+            queue.task_done()
         util.log("处理开始比特位为:[" + str(out_dic['start_byte']) + "]的chunk结束, task_done!")
         queue.task_done()
 
