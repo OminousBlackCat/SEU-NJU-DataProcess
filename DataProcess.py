@@ -180,7 +180,7 @@ def conduct_output(queue: Manager().Queue):
                 try:
                     current_image.append(decode(stream))
                 except BaseException:
-                    current_image.append(np.zeros(188, 384))
+                    current_image.append(np.zeros((188, 384)))
                     util.log("jp2文件解码失败! 已补零")
             childShape = current_image[0].shape
             completeImage = np.zeros((childShape[0], childShape[1] * 6), np.int16)
