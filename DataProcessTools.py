@@ -326,12 +326,9 @@ def processPicStream(data):
 # 输出bool
 # 检查通过则为True 不通过为False
 def check(data, Error_control):
-    check_xor = []
+    check_xor = Error_control
     # 获取异或检查长度
     control_num = len(Error_control)
-    # 抑或检查初始化
-    for x in Error_control:
-        Error_control.append(0)
 
     # 标记数据对应校验位
     id = 0
@@ -339,7 +336,7 @@ def check(data, Error_control):
     for data_list in data:
         # 对每部分数据做操作
         for x in data_list:
-            Error_control[id] ^= x
+            check_xor[id] ^= x
             # 标记为转移
             id = (id + 1) % control_num
     # 检查是否所有位数都为0
@@ -372,9 +369,9 @@ def dataWork(fread):
         MainHead, not_error = util.getData(fread, 8)
         if not_error:
             break
-        if not check([MainHead[:6]],MainHead[6:]):
-            fread.seek(now)
-            continue
+        # if not check([MainHead[:6]],MainHead[6:]):
+        #     fread.seek(now)
+        #     continue
 
         # 提取数据部分
         Data, not_error = Data + util.getData(fread, 2032)
