@@ -216,8 +216,9 @@ def conduct_output(queue: Manager().Queue):
                                        + str(scanCount).zfill(4) + '-' + str(frameCount).zfill(8) + '.fits',
                                        overwrite=True)
             except BaseException:
-                util.log("解析文件出错, 此帧文件开始比特为:[" + str(out_dic['start_byte']) + "], 已剔除")
+                util.log("解析文件出错, 此帧文件开始比特为:[" + str(out_dic['start_byte']) + "], 此文件已剔除")
                 continue
+        util.log("处理开始比特位为:[" + str(out_dic['start_byte']) + "]的chunk结束, task_done!")
         queue.task_done()
 
 
