@@ -23,11 +23,11 @@ import config
 import os
 import sys
 import traceback
-import datetime
 import time
 import util
 import csv
 import header
+import queue as qe
 
 # 载入参数
 GLOBAL_MULTIPROCESS_COUNT = config.multiprocess_count
@@ -125,7 +125,7 @@ terminal_signal = Value('i', 0)
 # 并行(创造者/工人)函数(worker/producer函数), process pool中的每个进程都将执行此函数
 # 函数输入: 队列, 文件的开始比特数位
 # 函数处理完之后会给队列提交结果, consumer进程将监视队列进行文件写出工作
-def process_file(start_byte: int, queue: Manager().Queue):
+def process_file(start_byte: int, queue: qe.Queue):
     util.log("开启producer函数, start byte为:" + str(start_byte))
     out_dict = {
         'image_list': [],
@@ -140,9 +140,9 @@ def process_file(start_byte: int, queue: Manager().Queue):
                 input_file, start_byte)
             out_dict['start_byte'] = start_byte
         except BaseException as e:
-            util.log(e)
             util.log("出现致命错误, 此块解析失败, 已跳过此chunk")
             traceback.print_exc()
+            return
     # 结果是一个dict, dict内部有两个list元素, list内容为图像数组与头数据数组
     # 将此结果放入queue中
     queue.put(out_dict)
@@ -151,7 +151,7 @@ def process_file(start_byte: int, queue: Manager().Queue):
 
 # 处理(消费者)函数(consumer函数), 监视队列, 对队列里的元素进行处理
 # 函数输入: 队列
-def conduct_output(queue: Manager().Queue):
+def conduct_output(queue: qe.Queue):
     while True:
         out_dic = None
         try:
@@ -181,7 +181,6 @@ def conduct_output(queue: Manager().Queue):
                         current_image.append(decode(stream))
                     except BaseException:
                         current_image.append(np.zeros((188, 384)))
-                        util.log("jp2文件解码失败! 已补零")
                 childShape = current_image[0].shape
                 completeImage = np.zeros((childShape[0], childShape[1] * 6), np.int16)
                 try:
