@@ -301,6 +301,8 @@ def processPicStream(data):
     # print(indexList)
     # print(M)
     # 不足8的倍数补0
+    if M == 0:
+        return [],[],[]
     while len(data) % 8 > 0:
         data.append(0)
     # 输出所有文件
@@ -404,10 +406,11 @@ def dataWork(fread):
                 # 处理图像帧内容
                 headerDic, headerList, picList = processPicStream(PicData)
                 # 存储图片头部信息
-                header_dic_data.append(deepcopy(headerDic))
-                header_list_data.append(deepcopy(headerList))
+                if len(headerDic)>0 :
+                    header_dic_data.append(deepcopy(headerDic))
+                    header_list_data.append(deepcopy(headerList))
                 # 储存图片信息
-                pic_data.append(deepcopy(picList))
+                    pic_data.append(deepcopy(picList))
             # 情况图像帧
             PicData = []
             # 编号计数
@@ -424,10 +427,11 @@ def dataWork(fread):
             # 处理图像帧内容
             headerDic, headerList, picList = processPicStream(PicData)
             # 存储图片头部信息
-            header_dic_data.append(deepcopy(headerDic))
-            header_list_data.append(deepcopy(headerList))
+            if len(headerDic) > 0:
+                header_dic_data.append(deepcopy(headerDic))
+                header_list_data.append(deepcopy(headerList))
             # 储存图片信息
-            pic_data.append(deepcopy(picList))
+                pic_data.append(deepcopy(picList))
         except BaseException as exception:
             # 文件读完返回-1
             util.log("剩余文件无法形成单独图像")
